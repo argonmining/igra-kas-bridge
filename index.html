@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Igra Bridge - KAS to iKAS</title>
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-tertiary: #1a1a24;
+      --text-primary: #ffffff;
+      --text-secondary: #a0a0b0;
+      --accent-primary: #6366f1;
+      --accent-secondary: #818cf8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --border: #2a2a3a;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .card-title::before {
+      content: '';
+      width: 4px;
+      height: 1.2em;
+      background: var(--accent-primary);
+      border-radius: 2px;
+    }
+    
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .status-row:last-child {
+      border-bottom: none;
+    }
+    
+    .status-label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+    
+    .status-value {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    .status-value.connected {
+      color: var(--success);
+    }
+    
+    .status-value.error {
+      color: var(--error);
+    }
+    
+    .address {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    button {
+      width: 100%;
+      padding: 0.875rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      color: white;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    }
+    
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .form-group {
+      margin-bottom: 1.25rem;
+    }
+    
+    label {
+      display: block;
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--text-secondary);
+    }
+    
+    input {
+      width: 100%;
+      padding: 0.875rem 1rem;
+      font-size: 1rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    
+    input:focus {
+      border-color: var(--accent-primary);
+    }
+    
+    input::placeholder {
+      color: var(--text-secondary);
+      opacity: 0.6;
+    }
+    
+    .input-hint {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 0.25rem;
+    }
+    
+    .log-container {
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      padding: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.8rem;
+      line-height: 1.8;
+    }
+    
+    .log-container div {
+      color: var(--text-secondary);
+    }
+    
+    .result-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+    
+    .result-item {
+      background: var(--bg-tertiary);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+    }
+    
+    .result-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+    }
+    
+    .result-value {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.85rem;
+      word-break: break-all;
+    }
+    
+    .links {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .links a {
+      flex: 1;
+      text-align: center;
+      padding: 0.75rem;
+      background: var(--bg-tertiary);
+      border-radius: 8px;
+      color: var(--accent-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    
+    .links a:hover {
+      background: var(--border);
+    }
+    
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--error);
+      color: var(--error);
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: none;
+    }
+    
+    .info-banner {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid var(--accent-primary);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    
+    .info-banner strong {
+      color: var(--accent-secondary);
+    }
+    
+    footer {
+      text-align: center;
+      padding: 2rem 0;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+    }
+    
+    footer a {
+      color: var(--accent-secondary);
+      text-decoration: none;
+    }
+    
+    footer a:hover {
+      text-decoration: underline;
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        padding: 1rem;
+      }
+      
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      .links {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Igra Bridge</h1>
+      <p class="subtitle">Bridge KAS from Kaspa Testnet to iKAS on Igra Galleon</p>
+    </header>
+    
+    <div class="info-banner">
+      <strong>Testnet Bridge</strong><br>
+      This bridge transfers tKAS from Kaspa Testnet-10 to iKAS on Igra Galleon Testnet.
+      Minimum amount: 1 KAS. Ensure your Kastle wallet is set to testnet-10.
+    </div>
+    
+    <div id="error-message" class="error-message"></div>
+    
+    <!-- Wallet Connection -->
+    <div id="wallet-section" class="card">
+      <h2 class="card-title">Wallet</h2>
+      <div class="status-row">
+        <span class="status-label">Status</span>
+        <span id="wallet-status" class="status-value">Not connected</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Address</span>
+        <span id="wallet-address" class="status-value address">-</span>
+      </div>
+      <div class="status-row">
+        <span class="status-label">Network</span>
+        <span id="network-status" class="status-value">-</span>
+      </div>
+      <button id="connect-btn" class="btn-primary" style="margin-top: 1rem;">
+        Connect Kastle Wallet
+      </button>
+    </div>
+    
+    <!-- Bridge Form -->
+    <div id="bridge-section" class="card" style="display: none;">
+      <h2 class="card-title">Bridge</h2>
+      
+      <div class="form-group">
+        <label for="amount-input">Amount (KAS)</label>
+        <input 
+          type="number" 
+          id="amount-input" 
+          min="1" 
+          step="0.00000001"
+          placeholder="Min: 1 KAS"
+        />
+        <div class="input-hint">Amount of KAS to bridge to Igra (minimum 1 KAS)</div>
+      </div>
+      
+      <div class="form-group">
+        <label for="l2-address-input">Destination Address (Igra L2)</label>
+        <input 
+          type="text" 
+          id="l2-address-input" 
+          placeholder="0x..."
+        />
+        <div class="input-hint">Your Ethereum-style address on Igra to receive iKAS</div>
+      </div>
+      
+      <button id="bridge-btn" class="btn-primary">
+        Bridge KAS → iKAS
+      </button>
+    </div>
+    
+    <!-- Transaction Log -->
+    <div class="card">
+      <h2 class="card-title">Activity Log</h2>
+      <div id="log-output" class="log-container">
+        <div>Initializing...</div>
+      </div>
+    </div>
+    
+    <!-- Result -->
+    <div id="result-section" class="card" style="display: none;">
+      <h2 class="card-title">Transaction Submitted</h2>
+      <div class="result-grid">
+        <div class="result-item">
+          <div class="result-label">Transaction ID</div>
+          <div id="result-txid" class="result-value">-</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">Amount</div>
+          <div id="result-amount" class="result-value">-</div>
+        </div>
+        <div class="result-item">
+          <div class="result-label">L2 Recipient</div>
+          <div id="result-l2-address" class="result-value">-</div>
+        </div>
+      </div>
+      <div class="links">
+        <a id="explorer-link" href="#" target="_blank">View on Kaspa Explorer</a>
+        <a id="l2-explorer-link" href="#" target="_blank">View on Igra Explorer</a>
+      </div>
+    </div>
+    
+    <footer>
+      <p>
+        <a href="https://igra-labs.gitbook.io/igralabs-docs/" target="_blank">Documentation</a>
+        &nbsp;·&nbsp;
+        <a href="https://github.com/IgraLabs" target="_blank">GitHub</a>
+        &nbsp;·&nbsp;
+        <a href="https://chromewebstore.google.com/detail/kastle/oambclflhjfppdmkghokjmpppmaebego" target="_blank">Get Kastle Wallet</a>
+      </p>
+      <p style="margin-top: 0.5rem;">Powered by Igra Labs</p>
+    </footer>
+  </div>
+  
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
