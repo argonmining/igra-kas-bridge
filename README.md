@@ -1,6 +1,6 @@
 # Igra Bridge
 
-Bridge KAS from Kaspa Testnet-10 (L1) to iKAS on Igra Galleon Testnet (L2).
+Bridge TKAS from Kaspa Testnet-10 (L1) to iKAS on Igra Galleon Testnet (L2).
 
 ## How It Works
 

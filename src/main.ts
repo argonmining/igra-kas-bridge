@@ -201,7 +201,7 @@ async function handleBridge(): Promise<void> {
     log(`ERROR: ${msg}`);
   } finally {
     elements.bridgeBtn().disabled = false;
-    elements.bridgeBtn().textContent = 'Bridge KAS → iKAS';
+    elements.bridgeBtn().textContent = 'Bridge TKAS → iKAS';
   }
 }
 
