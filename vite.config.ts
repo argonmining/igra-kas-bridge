@@ -7,4 +7,8 @@ export default defineConfig({
   build: {
     target: 'esnext',
   },
+  assetsInclude: ['**/*.wasm'],
+  optimizeDeps: {
+    exclude: ['./src/kaspa/kaspa.js'],
+  },
 });
