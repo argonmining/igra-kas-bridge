@@ -7,28 +7,33 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import init, * as kaspa from './kaspa/kaspa.js';
-
 let wasmInitialized = false;
+let wasmModule: any = null;
 
 /**
  * Initialize the Kaspa WASM module
  */
-export async function initKaspaWasm(): Promise<typeof kaspa> {
-  if (wasmInitialized) {
-    return kaspa;
+export async function initKaspaWasm(): Promise<any> {
+  if (wasmInitialized && wasmModule) {
+    return wasmModule;
   }
   
   try {
-    // Initialize WASM - uses import.meta.url internally to find the .wasm file
-    await init();
+    // Dynamic import from public folder - served as static files
+    // Using Function constructor to bypass TypeScript module resolution
+    const dynamicImport = new Function('path', 'return import(path)');
+    const kaspa = await dynamicImport('/kaspa/kaspa.js');
+    
+    // Initialize the WASM binary
+    await kaspa.default('/kaspa/kaspa_bg.wasm');
     
     // Enable console panic hooks for debugging
-    if (typeof (kaspa as any).initConsolePanicHook === 'function') {
-      (kaspa as any).initConsolePanicHook();
+    if (typeof kaspa.initConsolePanicHook === 'function') {
+      kaspa.initConsolePanicHook();
     }
     
     wasmInitialized = true;
+    wasmModule = kaspa;
     
     console.log('Kaspa WASM initialized successfully');
     return kaspa;
@@ -48,9 +53,9 @@ export function isWasmInitialized(): boolean {
 /**
  * Get the initialized WASM module
  */
-export function getKaspaWasm(): typeof kaspa {
-  if (!wasmInitialized) {
+export function getKaspaWasm(): any {
+  if (!wasmModule) {
     throw new Error('Kaspa WASM not initialized. Call initKaspaWasm() first.');
   }
-  return kaspa;
+  return wasmModule;
 }

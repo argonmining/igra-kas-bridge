@@ -39,16 +39,25 @@ export async function initRpcConnection(): Promise<void> {
   
   const kaspa = getKaspaWasm();
   
-  // Verified: new RpcClient({ resolver: new Resolver(), networkId: string })
-  rpcClient = new kaspa.RpcClient({
-    resolver: new kaspa.Resolver(),
-    networkId: CONFIG.L1.NETWORK_ID,
-  });
-  
-  await rpcClient.connect();
-  isConnected = true;
-  
-  console.log('Connected to Kaspa network via resolver');
+  try {
+    console.log('Creating Resolver...');
+    const resolver = new kaspa.Resolver();
+    
+    console.log('Creating RpcClient...');
+    rpcClient = new kaspa.RpcClient({
+      resolver,
+      networkId: CONFIG.L1.NETWORK_ID,
+    });
+    
+    console.log('Connecting to RPC...');
+    await rpcClient.connect();
+    isConnected = true;
+    
+    console.log('Connected to Kaspa network via resolver');
+  } catch (error) {
+    console.error('RPC connection failed:', error);
+    throw new Error(`RPC connection failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 /**
