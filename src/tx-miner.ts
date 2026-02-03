@@ -140,8 +140,9 @@ export function buildEntryTransaction(
     utxo: utxo,
   }));
   
-  // Estimate fee (simplified - in production use proper mass calculation)
-  const estimatedFee = 5000n; // 0.00005 KAS
+  // Fee based on typical transaction mass - Kaspa requires ~1 sompi per gram
+  // Entry transactions with payload are larger, using safe minimum
+  const estimatedFee = 10000n; // 0.0001 KAS - covers most entry transactions
   const change = totalAvailable - amountSompi - estimatedFee;
   
   // Build outputs array
