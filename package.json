@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "start": "serve dist"
+    "start": "serve dist -l ${PORT:-3000}"
   },
   "dependencies": {
     "serve": "^14.2.4"
