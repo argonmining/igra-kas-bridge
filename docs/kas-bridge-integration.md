@@ -1,10 +1,10 @@
 # tKAS → iKAS Bridge
 
-The KAS Bridge enables users to transfer tKAS from Kaspa L1 (testnet-10) to iKAS on Igra L2. This document covers the technical implementation details for the web-based bridge interface.
+The KAS Bridge enables users to wrap tKAS from Kaspa L1 (testnet-10) into iKAS on Igra L2. This document covers the technical implementation details for the web-based wrapping interface.
 
 ## Overview
 
-The bridge operates by constructing **Entry transactions** on Kaspa L1 that are recognized and processed by the Igra sequencer. Users lock KAS in the Entry address on L1, and equivalent iKAS is minted to their specified L2 address.
+The wrapping process constructs **Entry transactions** on Kaspa L1 that are detected by the Viaduct and processed by IgReth, Igra's EVM engine. Users lock KAS in the Entry address on L1, and their iKAS balance (Igra's native gas token) is increased on L2 via an EVM withdrawal.
 
 ### Key Parameters
 
@@ -52,7 +52,7 @@ The amount is stored in SOMPI (1 KAS = 100,000,000 SOMPI) as an unsigned 64-bit 
 
 ## TX ID Mining
 
-For the Igra sequencer to recognize an Entry transaction, the **Kaspa transaction ID must begin with the prefix `97b4`**.
+For the Igra Network to recognize an Entry transaction, the **Kaspa transaction ID must begin with the prefix `97b4`**.
 
 ### Mining Process
 
@@ -66,7 +66,7 @@ The 4-byte nonce field provides 2³² possible values, which is sufficient to fi
 
 ### Why TX ID Mining?
 
-The `97b4` prefix requirement serves as a filtering mechanism, allowing the Igra sequencer to efficiently identify Entry transactions among all Kaspa transactions without scanning every transaction's payload.
+The `97b4` prefix requirement serves as a filtering mechanism, allowing the Igra Network to efficiently identify Entry transactions among all Kaspa transactions without scanning every transaction's payload.
 
 ---
 
@@ -112,9 +112,9 @@ The `97b4` prefix requirement serves as a filtering mechanism, allowing the Igra
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  6. Igra sequencer detects TX (97b4 prefix)                      │
+│  6. Viaduct detects TX (97b4 prefix)                             │
 │     • Parses Entry payload                                       │
-│     • Mints iKAS to L2 address                                   │
+│     • IgReth increases iKAS balance via EVM withdrawal           │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -131,7 +131,7 @@ The Kaspa transaction is structured as follows:
 
 | Index | Recipient | Value | Purpose |
 |-------|-----------|-------|---------|
-| 0 | Entry Address | Bridge amount | KAS locking UTXO (must be first output) |
+| 0 | Entry Address | Wrap amount | KAS locking UTXO (must be first output) |
 | 1 | Sender Address | Remaining balance - fee | Change output |
 
 ### Payload
@@ -199,6 +199,6 @@ The bridge integrates with the [Kastle wallet](https://chromewebstore.google.com
 
 2. **UTXO Freshness**: UTXOs can become stale between mining and broadcast. Implement retry logic for failed broadcasts.
 
-3. **Amount Validation**: Enforce minimum bridge amount (1 KAS) to prevent dust attacks.
+3. **Amount Validation**: Enforce minimum wrap amount (1 KAS) to prevent dust attacks.
 
 4. **Address Validation**: Validate L2 addresses match the Ethereum address format (`0x` + 40 hex characters).
