@@ -1,15 +1,15 @@
 /**
  * Igra Bridge Transaction Construction
- * 
+ *
  * Constructs Entry transactions for bridging KAS (L1) to iKAS (L2)
- * 
+ *
  * Entry Transaction Format (L1 Payload):
  * [0x92] [L2Data: 20-byte address + 8-byte amount] [4-byte nonce]
- * 
+ *
  * Reference: https://igra-labs.gitbook.io/igralabs-docs/for-developers/architecture/specifications/igra-transaction-protocol#id-4.3-entry
  */
 
-import { CONFIG, kasToSompi, isValidL2Address } from './config';
+import { CONFIG, kasToSompi, isValidL2Address, getEntryAddress } from './config';
 import { sendKaspaWithPayload, signAndBroadcastTransaction } from './kastle';
 import { isWasmInitialized } from './kaspa-wasm';
 import { mineTxId, serializeForKastle, initRpcConnection } from './tx-miner';
@@ -36,7 +36,7 @@ export interface BridgeResult {
 
 /**
  * Constructs the Entry payload for bridging KAS to iKAS
- * 
+ *
  * Format: [0x92] [20-byte L2 address] [8-byte amount BE] [4-byte nonce]
  * Total: 33 bytes
  */
@@ -45,33 +45,33 @@ export function constructEntryPayload(l2Address: string, amountSompi: bigint, no
   if (!isValidL2Address(l2Address)) {
     throw new Error(`Invalid L2 address: ${l2Address}`);
   }
-  
+
   // Remove 0x prefix and convert to bytes
   const addressHex = l2Address.slice(2);
   const addressBytes = hexToBytes(addressHex);
-  
+
   if (addressBytes.length !== 20) {
     throw new Error('L2 address must be 20 bytes');
   }
-  
+
   // Create payload buffer: 1 (prefix) + 20 (address) + 8 (amount) + 4 (nonce) = 33 bytes
   const payload = new Uint8Array(33);
-  
+
   // Byte 0: Version + TxTypeId (0x92)
   payload[0] = CONFIG.ENTRY_TX.PAYLOAD_PREFIX;
-  
+
   // Bytes 1-20: L2 recipient address
   payload.set(addressBytes, 1);
-  
+
   // Bytes 21-28: Amount in SOMPI (unsigned 64-bit little endian)
   // Verified from actual tx: 20 KAS stored as 00 94 35 77 00 00 00 00
   const amountBytes = bigintToBytes8LE(amountSompi);
   payload.set(amountBytes, 21);
-  
+
   // Bytes 29-32: Nonce (unsigned 32-bit big endian)
   const nonceBytes = uint32ToBytes4BE(nonce);
   payload.set(nonceBytes, 29);
-  
+
   return payload;
 }
 
@@ -97,7 +97,7 @@ function hexToBytes(hex: string): Uint8Array {
 
 /**
  * Convert bigint to 8-byte little-endian representation
- * 
+ *
  * Based on actual Igra transaction analysis:
  * 20 KAS = 2,000,000,000 SOMPI = 0x77359400
  * Stored as: 00 94 35 77 00 00 00 00 (little-endian)
@@ -129,16 +129,16 @@ function uint32ToBytes4BE(value: number): Uint8Array {
  */
 export function validateBridgeParams(params: BridgeParams): void {
   const { amountKas, l2Address } = params;
-  
+
   // Validate amount
   if (amountKas < CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS) {
     throw new Error(`Minimum bridge amount is ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS`);
   }
-  
+
   if (!Number.isFinite(amountKas) || amountKas <= 0) {
     throw new Error('Invalid amount');
   }
-  
+
   // Validate L2 address
   if (!isValidL2Address(l2Address)) {
     throw new Error('Invalid L2 address. Must be a valid Ethereum-style address (0x...)');
@@ -146,43 +146,37 @@ export function validateBridgeParams(params: BridgeParams): void {
 }
 
 /**
- * Execute bridge transaction
- * 
- * This sends KAS to the Igra Entry address with the proper payload.
- * The transaction ID must match the required prefix for Igra to recognize it.
- * 
- * Payload format (verified from actual tx 97b6b3bbd741a56ddccaae8211724e3b2a1b305cb5929f0c3b884e3ae0bc3a61):
- * - Byte 0: 0x92 (Version 0x9 + TxTypeId 0x2)
- * - Bytes 1-20: L2 recipient address (20 bytes)
- * - Bytes 21-28: Amount in SOMPI (8 bytes, little-endian)
- * - Bytes 29-32: Nonce for TX ID mining (4 bytes, big-endian)
- * 
+ * Execute bridge transaction (fallback without mining)
+ *
  * @param params Bridge parameters
+ * @param senderAddress Kaspa address of the sender (needed for self-send mode)
  * @param onProgress Optional callback for progress updates
  */
 export async function executeBridge(
   params: BridgeParams,
+  senderAddress: string,
   onProgress?: (message: string) => void
 ): Promise<BridgeResult> {
   validateBridgeParams(params);
-  
+
   const { amountKas, l2Address } = params;
   const amountSompi = kasToSompi(amountKas);
-  
+  const entryAddress = getEntryAddress(senderAddress);
+
   onProgress?.(`Preparing bridge transaction...`);
   onProgress?.(`Amount: ${amountKas} KAS (${amountSompi} SOMPI)`);
   onProgress?.(`L2 Address: ${l2Address}`);
-  onProgress?.(`Entry Address: ${CONFIG.L1.ENTRY_ADDRESS}`);
-  
+  onProgress?.(`Entry Address: ${entryAddress}`);
+
   // Generate a random nonce for this attempt
   // TX ID must start with the required prefix for Igra to recognize it
   const nonce = generateRandomNonce();
   onProgress?.(`Generated nonce: 0x${nonce.toString(16).padStart(8, '0')} (${nonce})`);
-  
+
   // Construct payload
   const payload = constructEntryPayload(l2Address, amountSompi, nonce);
   const payloadHex = payloadToHex(payload);
-  
+
   // Verify payload construction
   const decoded = decodeEntryPayload(payloadHex);
   onProgress?.(`Payload constructed: ${payloadHex}`);
@@ -190,32 +184,32 @@ export async function executeBridge(
   onProgress?.(`  - L2 Addr: ${decoded.l2Address}`);
   onProgress?.(`  - Amount: ${decoded.amountKas} KAS (${decoded.amountSompi} SOMPI)`);
   onProgress?.(`  - Nonce: 0x${decoded.nonce.toString(16).padStart(8, '0')}`);
-  
+
   onProgress?.(`Sending transaction via Kastle wallet...`);
   onProgress?.(`Required TX ID prefix: ${CONFIG.L1.TX_ID_PREFIX}`);
-  
+
   // Send transaction via Kastle
   const txId = await sendKaspaWithPayload(
-    CONFIG.L1.ENTRY_ADDRESS,
+    entryAddress,
     amountSompi,
     payloadHex
   );
-  
+
   onProgress?.(`Transaction submitted: ${txId}`);
-  
+
   // Check if TX ID matches required prefix
   const expectedPrefix = CONFIG.L1.TX_ID_PREFIX.toLowerCase();
   const actualPrefix = txId.slice(0, expectedPrefix.length).toLowerCase();
-  
+
   if (actualPrefix !== expectedPrefix) {
-    onProgress?.(`⚠️ TX ID prefix mismatch!`);
+    onProgress?.(`Warning: TX ID prefix mismatch!`);
     onProgress?.(`Expected: ${expectedPrefix}, Got: ${actualPrefix}`);
     onProgress?.(`The bridge may not recognize this transaction.`);
     onProgress?.(`Consider retrying - each attempt uses a different nonce.`);
   } else {
-    onProgress?.(`✓ TX ID prefix matches! Bridge should process this transaction.`);
+    onProgress?.(`TX ID prefix matches! Bridge should process this transaction.`);
   }
-  
+
   return {
     txId,
     amountSompi,
@@ -226,10 +220,10 @@ export async function executeBridge(
 }
 
 /**
- * Get explorer URL for a transaction
+ * Get L1 explorer URL for a transaction
  */
 export function getExplorerUrl(txId: string): string {
-  return `https://explorer-tn10.kaspa.org/txs/${txId}`;
+  return `${CONFIG.L1.EXPLORER_BASE}/txs/${txId}`;
 }
 
 /**
@@ -251,26 +245,26 @@ export function decodeEntryPayload(payloadHex: string): {
   nonce: number;
 } {
   const bytes = hexToBytes(payloadHex);
-  
+
   if (bytes.length !== 33) {
     throw new Error(`Invalid payload length: expected 33 bytes, got ${bytes.length}`);
   }
-  
+
   const prefix = bytes[0].toString(16).padStart(2, '0');
-  
+
   // Extract L2 address (bytes 1-20)
   const addressBytes = bytes.slice(1, 21);
   const l2Address = '0x' + Array.from(addressBytes).map(b => b.toString(16).padStart(2, '0')).join('');
-  
+
   // Extract amount (bytes 21-28, little-endian)
   let amountSompi = 0n;
   for (let i = 0; i < 8; i++) {
     amountSompi |= BigInt(bytes[21 + i]) << BigInt(i * 8);
   }
-  
+
   // Extract nonce (bytes 29-32, big-endian)
   const nonce = (bytes[29] << 24) | (bytes[30] << 16) | (bytes[31] << 8) | bytes[32];
-  
+
   return {
     prefix,
     l2Address,
@@ -289,13 +283,13 @@ export function generateRandomNonce(): number {
 
 /**
  * Execute bridge transaction with proper TX ID mining
- * 
+ *
  * This uses the Kaspa WASM SDK to:
  * 1. Fetch UTXOs for the sender
  * 2. Build a transaction with the Entry payload
- * 3. Mine the nonce until TX ID matches required prefix (97b4)
+ * 3. Mine the nonce until TX ID matches required prefix
  * 4. Sign and broadcast via Kastle wallet
- * 
+ *
  * @param params Bridge parameters
  * @param senderAddress Kaspa address of the sender
  * @param onProgress Optional callback for progress updates
@@ -306,61 +300,63 @@ export async function executeBridgeWithMining(
   onProgress?: (message: string) => void
 ): Promise<BridgeResult> {
   validateBridgeParams(params);
-  
+
   if (!isWasmInitialized()) {
     throw new Error('Kaspa WASM not initialized. Cannot mine TX ID.');
   }
-  
+
   const { amountKas, l2Address } = params;
   const amountSompi = kasToSompi(amountKas);
-  
+  const entryAddress = getEntryAddress(senderAddress);
+
   onProgress?.(`Preparing bridge transaction with TX ID mining...`);
   onProgress?.(`Amount: ${amountKas} KAS (${amountSompi} SOMPI)`);
   onProgress?.(`L2 Address: ${l2Address}`);
-  onProgress?.(`Entry Address: ${CONFIG.L1.ENTRY_ADDRESS}`);
+  onProgress?.(`Entry Address: ${entryAddress}`);
   onProgress?.(`Required TX ID prefix: ${CONFIG.L1.TX_ID_PREFIX}`);
-  
+
   // Connect to Kaspa network
-  onProgress?.(`Connecting to Kaspa network...`);
+  onProgress?.(`Connecting to Kaspa ${CONFIG.L1.NETWORK_ID} network...`);
   await initRpcConnection();
-  onProgress?.(`✓ Connected to Kaspa network`);
-  
+  onProgress?.(`Connected to Kaspa network`);
+
   // Mine TX ID
   onProgress?.(`Mining TX ID (this may take a moment)...`);
-  
+
   const miningResult = await mineTxId(
     senderAddress,
     l2Address,
     amountSompi,
+    entryAddress,
     (iteration, currentTxId) => {
       onProgress?.(`Mining: iteration ${iteration}, current prefix: ${currentTxId.slice(0, 4)}`);
     }
   );
-  
-  onProgress?.(`✓ Found matching TX ID after ${miningResult.iterations} iterations`);
+
+  onProgress?.(`Found matching TX ID after ${miningResult.iterations} iterations`);
   onProgress?.(`TX ID: ${miningResult.txId}`);
   onProgress?.(`Nonce: 0x${miningResult.nonce.toString(16).padStart(8, '0')}`);
-  
+
   // Serialize transaction for Kastle signing
   const txJson = serializeForKastle(miningResult.tx);
   onProgress?.(`Transaction built, requesting signature from Kastle...`);
-  
+
   // Sign and broadcast via Kastle
   const txId = await signAndBroadcastTransaction(txJson);
-  
-  onProgress?.(`✓ Transaction submitted: ${txId}`);
-  
+
+  onProgress?.(`Transaction submitted: ${txId}`);
+
   // Verify the TX ID matches (should match since we mined it)
   const expectedPrefix = CONFIG.L1.TX_ID_PREFIX.toLowerCase();
   const actualPrefix = txId.slice(0, expectedPrefix.length).toLowerCase();
-  
+
   if (actualPrefix !== expectedPrefix) {
-    onProgress?.(`⚠️ Warning: Broadcast TX ID differs from mined TX ID`);
+    onProgress?.(`Warning: Broadcast TX ID differs from mined TX ID`);
     onProgress?.(`This can happen if UTXOs changed during signing.`);
   } else {
-    onProgress?.(`✓ TX ID prefix verified: ${actualPrefix}`);
+    onProgress?.(`TX ID prefix verified: ${actualPrefix}`);
   }
-  
+
   return {
     txId,
     amountSompi,
