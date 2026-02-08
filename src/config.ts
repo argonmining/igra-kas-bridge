@@ -1,63 +1,111 @@
 /**
  * Igra Bridge Configuration
- * 
- * Configuration for bridging KAS from Kaspa Testnet-10 (L1) to Igra Galleon Testnet (L2)
+ *
+ * Configuration for bridging KAS from Kaspa L1 to iKAS on Igra L2.
+ * Supports both Galleon Testnet (testnet-10) and Galleon Test Mainnet (mainnet).
  */
 
-export const CONFIG = {
-  // L1 (Kaspa) Configuration
+export type NetworkMode = 'testnet' | 'test-mainnet';
+
+export interface NetworkConfig {
   L1: {
-    NETWORK_ID: 'testnet-10' as const,
-    
-    // The P2SH address where KAS is locked for bridging
-    // This is the Igra multisig entry address
-    ENTRY_ADDRESS: 'kaspatest:qqmstl2znv9tsfgcmj9shme82my867tapz7pdu4ztwdn6sm9452jj5mm0sxzw',
-    
-    // Transaction ID must start with this prefix (hex)
-    // This is used for tx ID mining/filtering
-    TX_ID_PREFIX: '97b4',
-    
-    // Minimum bridge amount in KAS
-    MIN_BRIDGE_AMOUNT_KAS: 1,
-    
-    // 1 KAS = 100,000,000 SOMPI (10^8)
-    SOMPI_PER_KAS: 100_000_000n,
-  },
-  
-  // L2 (Igra) Configuration  
+    readonly NETWORK_ID: 'testnet-10' | 'mainnet';
+    /** The P2SH address where KAS is locked for bridging. Null means self-send (sender's own address). */
+    readonly ENTRY_ADDRESS: string | null;
+    readonly TX_ID_PREFIX: string;
+    readonly MIN_BRIDGE_AMOUNT_KAS: number;
+    readonly SOMPI_PER_KAS: bigint;
+    readonly EXPLORER_BASE: string;
+  };
   L2: {
-    NETWORK_NAME: 'Igra Galleon Testnet',
-    RPC_URL: 'https://galleon-testnet.igralabs.com:8545',
-    CHAIN_ID: 38836,
-    CURRENCY_SYMBOL: 'iKAS',
-    CURRENCY_DECIMALS: 18,
-    BLOCK_EXPLORER: 'https://explorer.galleon-testnet.igralabs.com',
+    readonly NETWORK_NAME: string;
+    readonly RPC_URL: string;
+    readonly CHAIN_ID: number;
+    readonly CURRENCY_SYMBOL: string;
+    readonly CURRENCY_DECIMALS: number;
+    readonly BLOCK_EXPLORER: string;
+  };
+}
+
+const NETWORKS: Record<NetworkMode, NetworkConfig> = {
+  testnet: {
+    L1: {
+      NETWORK_ID: 'testnet-10',
+      ENTRY_ADDRESS: 'kaspatest:qqmstl2znv9tsfgcmj9shme82my867tapz7pdu4ztwdn6sm9452jj5mm0sxzw',
+      TX_ID_PREFIX: '97b4',
+      MIN_BRIDGE_AMOUNT_KAS: 1,
+      SOMPI_PER_KAS: 100_000_000n,
+      EXPLORER_BASE: 'https://explorer-tn10.kaspa.org',
+    },
+    L2: {
+      NETWORK_NAME: 'Igra Galleon Testnet',
+      RPC_URL: 'https://galleon-testnet.igralabs.com:8545',
+      CHAIN_ID: 38836,
+      CURRENCY_SYMBOL: 'iKAS',
+      CURRENCY_DECIMALS: 18,
+      BLOCK_EXPLORER: 'https://explorer.galleon.igralabs.com',
+    },
   },
-  
-  // Entry Transaction Configuration
+  'test-mainnet': {
+    L1: {
+      NETWORK_ID: 'mainnet',
+      ENTRY_ADDRESS: null, // Self-send: KAS goes back to sender's own address
+      TX_ID_PREFIX: '97b5',
+      MIN_BRIDGE_AMOUNT_KAS: 1,
+      SOMPI_PER_KAS: 100_000_000n,
+      EXPLORER_BASE: 'https://explorer.kaspa.org',
+    },
+    L2: {
+      NETWORK_NAME: 'Igra Galleon Test Mainnet',
+      RPC_URL: 'https://galleon.igralabs.com:8545',
+      CHAIN_ID: 38837,
+      CURRENCY_SYMBOL: 'iKAS',
+      CURRENCY_DECIMALS: 18,
+      BLOCK_EXPLORER: 'https://explorer.galleon.igralabs.com',
+    },
+  },
+};
+
+// Shared constants (same across all networks)
+const SHARED = {
   ENTRY_TX: {
-    // Version (4 bits) + TxTypeId (4 bits) = 0x92 for Entry transaction
-    // Version: 0x9, TxTypeId: 0x2 (b0010)
     PAYLOAD_PREFIX: 0x92,
-    
-    // L2Data structure for Entry:
-    // - 20 bytes: recipient L2 address
-    // - 8 bytes: amount in SOMPI (unsigned int, big endian)
     L2_DATA_LENGTH: 28,
-    
-    // Nonce length for tx ID mining
     NONCE_LENGTH: 4,
   },
-  
-  // Mining Configuration
   MINING: {
-    // Maximum nonce iterations before giving up
     MAX_NONCE_ITERATIONS: 10_000_000,
-    
-    // Report progress every N iterations
     PROGRESS_INTERVAL: 100_000,
   },
 } as const;
+
+// Current network state
+let currentMode: NetworkMode = 'testnet';
+
+/**
+ * Get the current network mode
+ */
+export function getNetworkMode(): NetworkMode {
+  return currentMode;
+}
+
+/**
+ * Set the active network mode
+ */
+export function setNetworkMode(mode: NetworkMode): void {
+  currentMode = mode;
+}
+
+/**
+ * Active network config — use this instead of the old CONFIG constant.
+ * Returns L1/L2 config for the currently selected network.
+ */
+export const CONFIG = {
+  get L1() { return NETWORKS[currentMode].L1; },
+  get L2() { return NETWORKS[currentMode].L2; },
+  ENTRY_TX: SHARED.ENTRY_TX,
+  MINING: SHARED.MINING,
+};
 
 /**
  * Validates an Ethereum-style address (0x prefixed, 40 hex chars)
@@ -67,9 +115,12 @@ export function isValidL2Address(address: string): boolean {
 }
 
 /**
- * Validates a Kaspa testnet address
+ * Validates a Kaspa address for the current network
  */
-export function isValidKaspaTestnetAddress(address: string): boolean {
+export function isValidKaspaAddress(address: string): boolean {
+  if (currentMode === 'test-mainnet') {
+    return address.startsWith('kaspa:');
+  }
   return address.startsWith('kaspatest:');
 }
 
@@ -85,4 +136,15 @@ export function kasToSompi(kas: number): bigint {
  */
 export function sompiToKas(sompi: bigint): number {
   return Number(sompi) / Number(CONFIG.L1.SOMPI_PER_KAS);
+}
+
+/**
+ * Returns the entry address for the current network.
+ * For test-mainnet (self-send), requires the sender address.
+ */
+export function getEntryAddress(senderAddress?: string): string {
+  const entry = CONFIG.L1.ENTRY_ADDRESS;
+  if (entry !== null) return entry;
+  if (!senderAddress) throw new Error('Sender address required for self-send mode');
+  return senderAddress;
 }

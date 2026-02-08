@@ -1,13 +1,13 @@
 /**
  * TX ID Miner - Mines nonces to achieve required TX ID prefix
- * 
+ *
  * Uses Kaspa WASM SDK to:
  * 1. Connect to Kaspa network via Resolver
  * 2. Fetch UTXOs for user's address
  * 3. Build transaction with Entry payload
- * 4. Mine nonce until TX ID matches required prefix (97b4)
+ * 4. Mine nonce until TX ID matches required prefix
  * 5. Return unsigned transaction for Kastle to sign
- * 
+ *
  * API verified against kaspa.d.ts type definitions.
  */
 
@@ -20,40 +20,48 @@ import { constructEntryPayload, payloadToHex } from './bridge';
 // Mining state
 let rpcClient: any = null;
 let isConnected = false;
+let connectedNetworkId: string | null = null;
 
 /**
  * Initialize RPC connection using Resolver
- * 
- * Verified: RpcClient constructor takes { resolver: Resolver, networkId: string }
- * Verified: Resolver constructor takes optional config or nothing
- * Verified: RpcClient.connect() returns Promise<void>
+ *
+ * Reconnects if the network has changed since last connection.
  */
 export async function initRpcConnection(): Promise<void> {
   if (!isWasmInitialized()) {
     throw new Error('Kaspa WASM not initialized');
   }
-  
+
+  const targetNetwork = CONFIG.L1.NETWORK_ID;
+
+  // Reconnect if network changed
+  if (isConnected && rpcClient && connectedNetworkId !== targetNetwork) {
+    console.log(`Network changed from ${connectedNetworkId} to ${targetNetwork}, reconnecting...`);
+    await disconnectRpc();
+  }
+
   if (isConnected && rpcClient) {
     return;
   }
-  
+
   const kaspa = getKaspaWasm();
-  
+
   try {
     console.log('Creating Resolver...');
     const resolver = new kaspa.Resolver();
-    
-    console.log('Creating RpcClient...');
+
+    console.log(`Creating RpcClient for ${targetNetwork}...`);
     rpcClient = new kaspa.RpcClient({
       resolver,
-      networkId: CONFIG.L1.NETWORK_ID,
+      networkId: targetNetwork,
     });
-    
+
     console.log('Connecting to RPC...');
     await rpcClient.connect();
     isConnected = true;
-    
-    console.log('Connected to Kaspa network via resolver');
+    connectedNetworkId = targetNetwork;
+
+    console.log(`Connected to Kaspa network (${targetNetwork}) via resolver`);
   } catch (error) {
     console.error('RPC connection failed:', error);
     throw new Error(`RPC connection failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -62,31 +70,18 @@ export async function initRpcConnection(): Promise<void> {
 
 /**
  * Get UTXOs for an address
- * 
- * Verified: getUtxosByAddresses(string[]) returns { entries: UtxoEntryReference[] }
- * Verified: UtxoEntryReference has: outpoint, amount, scriptPublicKey
  */
 export async function getUtxos(address: string): Promise<any[]> {
   if (!rpcClient || !isConnected) {
     throw new Error('RPC not connected');
   }
-  
-  // Verified: accepts Address[] | string[]
+
   const response = await rpcClient.getUtxosByAddresses([address]);
   return response.entries || [];
 }
 
 /**
  * Build an unsigned transaction with Entry payload
- * 
- * Verified interfaces:
- * - ITransaction { version, inputs, outputs, lockTime, subnetworkId, gas, payload }
- * - ITransactionInput { previousOutpoint: { transactionId, index }, signatureScript?, sequence, sigOpCount }
- * - ITransactionOutput { value, scriptPublicKey: IScriptPublicKey | HexString }
- * - IScriptPublicKey { version, script }
- * 
- * Verified: payToAddressScript(string) returns ScriptPublicKey
- * Verified: Transaction constructor takes ITransaction
  */
 export function buildEntryTransaction(
   kaspa: any,
@@ -100,53 +95,49 @@ export function buildEntryTransaction(
   // Construct the Entry payload
   const payload = constructEntryPayload(l2Address, amountSompi, nonce);
   const payloadHex = payloadToHex(payload);
-  
-  // Verified: payToAddressScript returns ScriptPublicKey with { version, script }
+
   const entryScriptPubKey = kaspa.payToAddressScript(entryAddress);
   const senderScriptPubKey = kaspa.payToAddressScript(senderAddress);
-  
-  // Calculate total available from UTXOs
-  // Verified: UtxoEntryReference has .amount (bigint) and .outpoint (TransactionOutpoint)
+
+  // Fee estimation: Kaspa charges ~1 sompi per gram of transaction mass.
+  // Entry transactions have a 33-byte payload which adds mass.
+  // Base mass ~700 + ~140 per input + ~120 per output + payload mass.
+  // Use a generous minimum that covers typical entry transactions.
+  const baseFee = 3000n;
+  const perInputFee = 1000n;
+
   let totalAvailable = 0n;
   const selectedUtxos: any[] = [];
-  
+
   for (const utxo of utxos) {
     totalAvailable += utxo.amount;
     selectedUtxos.push(utxo);
-    
-    // Stop once we have enough (with buffer for fees)
-    const feeBuffer = 10000n; // 0.0001 KAS for fees
-    if (totalAvailable >= amountSompi + feeBuffer) {
+
+    const estimatedFee = baseFee + perInputFee * BigInt(selectedUtxos.length);
+    if (totalAvailable >= amountSompi + estimatedFee) {
       break;
     }
   }
-  
-  if (totalAvailable < amountSompi) {
-    throw new Error(`Insufficient funds. Have: ${totalAvailable}, Need: ${amountSompi}`);
+
+  const estimatedFee = baseFee + perInputFee * BigInt(selectedUtxos.length);
+
+  if (totalAvailable < amountSompi + estimatedFee) {
+    throw new Error(`Insufficient funds. Have: ${totalAvailable}, Need: ${amountSompi} + ~${estimatedFee} fee`);
   }
-  
-  // Build inputs array
-  // Verified: ITransactionInput interface
-  // IMPORTANT: Include utxo data for signing - ISerializableTransactionInput requires it
+
   const inputs: any[] = selectedUtxos.map(utxo => ({
     previousOutpoint: {
       transactionId: utxo.outpoint.transactionId,
       index: utxo.outpoint.index,
     },
-    signatureScript: '', // Empty for unsigned, will be filled by signing
+    signatureScript: '',
     sequence: 0n,
     sigOpCount: 1,
-    // Include UTXO reference for signing (needed by ISerializableTransactionInput)
     utxo: utxo,
   }));
-  
-  // Fee based on typical transaction mass - Kaspa requires ~1 sompi per gram
-  // Entry transactions with payload are larger, using safe minimum
-  const estimatedFee = 10000n; // 0.0001 KAS - covers most entry transactions
+
   const change = totalAvailable - amountSompi - estimatedFee;
-  
-  // Build outputs array
-  // Verified: ITransactionOutput { value, scriptPublicKey }
+
   // Output 0: KAS Locking UTXO (Entry address with exact amount) - MUST be first per Igra spec
   const outputs: any[] = [
     {
@@ -157,7 +148,7 @@ export function buildEntryTransaction(
       },
     },
   ];
-  
+
   // Output 1: Change back to sender (if any)
   if (change > 0n) {
     outputs.push({
@@ -168,27 +159,24 @@ export function buildEntryTransaction(
       },
     });
   }
-  
-  // Verified: Transaction constructor takes ITransaction
+
   const txData = {
     version: 0,
     inputs,
     outputs,
     lockTime: 0n,
-    subnetworkId: '0000000000000000000000000000000000000000', // Native subnetwork (20 bytes = 40 hex chars)
+    subnetworkId: '0000000000000000000000000000000000000000',
     gas: 0n,
     payload: payloadHex,
   };
-  
+
   const tx = new kaspa.Transaction(txData);
-  
+
   return tx;
 }
 
 /**
  * Get transaction ID from a transaction object
- * 
- * Verified: Transaction.id is readonly string property
  */
 export function getTransactionId(tx: any): string {
   return tx.id;
@@ -203,70 +191,74 @@ export function matchesPrefix(txId: string, prefix: string): boolean {
 
 /**
  * Mine nonce to find TX ID matching required prefix
+ *
+ * @param senderAddress Kaspa address of the sender
+ * @param l2Address L2 destination address
+ * @param amountSompi Amount in SOMPI
+ * @param entryAddress Kaspa address to send to (entry address or sender for self-send)
+ * @param onProgress Optional progress callback
  */
 export async function mineTxId(
   senderAddress: string,
   l2Address: string,
   amountSompi: bigint,
+  entryAddress: string,
   onProgress?: (iteration: number, currentTxId: string) => void
 ): Promise<{ tx: any; txId: string; nonce: number; iterations: number }> {
   if (!isWasmInitialized()) {
     throw new Error('Kaspa WASM not initialized');
   }
-  
+
   const kaspa = getKaspaWasm();
-  
+
   // Ensure RPC is connected
   await initRpcConnection();
-  
+
   // Get UTXOs for sender
   const utxos = await getUtxos(senderAddress);
   if (utxos.length === 0) {
     throw new Error('No UTXOs found for sender address. Make sure your wallet has funds.');
   }
-  
+
   const requiredPrefix = CONFIG.L1.TX_ID_PREFIX;
   const maxIterations = CONFIG.MINING.MAX_NONCE_ITERATIONS;
-  
+
   // Start with random nonce to avoid collisions
   let nonce = Math.floor(Math.random() * 0xFFFFFFFF);
-  
+
   for (let i = 0; i < maxIterations; i++) {
     // Build transaction with current nonce
     const tx = buildEntryTransaction(
       kaspa,
       utxos,
       senderAddress,
-      CONFIG.L1.ENTRY_ADDRESS,
+      entryAddress,
       amountSompi,
       l2Address,
       nonce
     );
-    
+
     const txId = getTransactionId(tx);
-    
+
     // Report progress periodically
     if (onProgress && i % CONFIG.MINING.PROGRESS_INTERVAL === 0) {
       onProgress(i, txId);
     }
-    
+
     // Check if we found a match
     if (matchesPrefix(txId, requiredPrefix)) {
       return { tx, txId, nonce, iterations: i + 1 };
     }
-    
+
     // Increment nonce (wrap around at max uint32)
     nonce = (nonce + 1) >>> 0;
   }
-  
+
   throw new Error(`Failed to find matching TX ID after ${maxIterations} iterations`);
 }
 
 /**
  * Serialize transaction to JSON for Kastle signing
- * 
- * Verified: Transaction.serializeToSafeJSON() returns string with bigints as strings
- * Using SafeJSON because Kastle may expect string types for numeric fields
  */
 export function serializeForKastle(tx: any): string {
   return tx.serializeToSafeJSON();
@@ -274,20 +266,17 @@ export function serializeForKastle(tx: any): string {
 
 /**
  * Submit signed transaction to network
- * 
- * Verified: submitTransaction({ transaction: Transaction, allowOrphan?: boolean })
- * Returns: { transactionId: HexString }
  */
 export async function submitTransaction(signedTx: any): Promise<string> {
   if (!rpcClient || !isConnected) {
     throw new Error('RPC not connected');
   }
-  
+
   const response = await rpcClient.submitTransaction({
     transaction: signedTx,
     allowOrphan: false,
   });
-  
+
   return response.transactionId;
 }
 
@@ -298,6 +287,7 @@ export async function disconnectRpc(): Promise<void> {
   if (rpcClient && isConnected) {
     await rpcClient.disconnect();
     isConnected = false;
+    connectedNetworkId = null;
     rpcClient = null;
   }
 }
