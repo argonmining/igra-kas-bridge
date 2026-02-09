@@ -1,20 +1,45 @@
-# tKAS → iKAS Bridge
+# KAS → iKAS Bridge Integration
 
-The KAS Bridge enables users to wrap tKAS from Kaspa L1 (testnet-10) into iKAS on Igra L2. This document covers the technical implementation details for the web-based wrapping interface.
+The KAS Bridge enables users to wrap KAS from Kaspa L1 into iKAS on Igra L2. This document covers the technical implementation details for the web-based wrapping interface.
 
 ## Overview
 
-The wrapping process constructs **Entry transactions** on Kaspa L1 that are detected by the Viaduct and processed by IgReth, Igra's EVM engine. Users lock KAS in the Entry address on L1, and their iKAS balance (Igra's native gas token) is increased on L2 via an EVM withdrawal.
+The wrapping process constructs **Entry transactions** on Kaspa L1 that are detected by the Viaduct and processed by IgReth, Igra's EVM engine. The bridge supports two modes:
 
-### Key Parameters
+| Mode | L1 Network | Mechanism | TX ID Prefix |
+|------|------------|-----------|--------------|
+| Galleon Testnet | Kaspa Testnet-10 | KAS locked in Entry address | `97b4` |
+| Galleon Test Mainnet | Kaspa Mainnet | Self-send (KAS stays in wallet) | `97b5` |
+
+---
+
+## Network Configuration
+
+### Galleon Testnet
 
 | Parameter | Value |
 |-----------|-------|
-| Network | Kaspa Testnet-10 |
+| L1 Network | Kaspa Testnet-10 |
 | Entry Address | `kaspatest:qqmstl2znv9tsfgcmj9shme82my867tapz7pdu4ztwdn6sm9452jj5mm0sxzw` |
-| Required TX ID Prefix | `97b4` |
+| TX ID Prefix | `97b4` |
+| L2 Chain ID | 38836 |
+| L2 RPC | `https://galleon-testnet.igralabs.com:8545` |
 | Minimum Amount | 1 KAS |
-| L2 Chain ID | 38836 (Igra Galleon Testnet) |
+
+In testnet mode, KAS is sent to a designated Entry address where it is locked.
+
+### Galleon Test Mainnet
+
+| Parameter | Value |
+|-----------|-------|
+| L1 Network | Kaspa Mainnet |
+| Entry Address | Self (sender's own address) |
+| TX ID Prefix | `97b5` |
+| L2 Chain ID | 38837 |
+| L2 RPC | `https://galleon.igralabs.com:8545` |
+| Minimum Amount | 1 KAS |
+
+In test mainnet mode, KAS is sent back to the user's own address with an Entry payload. **KAS never leaves the user's wallet**—the transaction simply tags the KAS with the Entry payload, which the Igra network detects and uses to mint iKAS.
 
 ---
 
@@ -52,86 +77,127 @@ The amount is stored in SOMPI (1 KAS = 100,000,000 SOMPI) as an unsigned 64-bit 
 
 ## TX ID Mining
 
-For the Igra Network to recognize an Entry transaction, the **Kaspa transaction ID must begin with the prefix `97b4`**.
+For the Igra Network to recognize an Entry transaction, the **Kaspa transaction ID must begin with the required prefix**:
+
+| Network | Required Prefix |
+|---------|-----------------|
+| Testnet-10 | `97b4` |
+| Mainnet | `97b5` |
 
 ### Mining Process
 
 1. Construct the Entry payload with an initial random nonce
 2. Build the complete Kaspa transaction
 3. Compute the transaction ID (hash)
-4. If TX ID starts with `97b4`, the transaction is valid
+4. If TX ID starts with the required prefix, the transaction is valid
 5. Otherwise, increment the nonce and repeat
 
 The 4-byte nonce field provides 2³² possible values, which is sufficient to find a matching TX ID prefix within a reasonable number of iterations (typically < 100,000).
 
 ### Why TX ID Mining?
 
-The `97b4` prefix requirement serves as a filtering mechanism, allowing the Igra Network to efficiently identify Entry transactions among all Kaspa transactions without scanning every transaction's payload.
+The prefix requirement serves as a filtering mechanism, allowing the Igra Network to efficiently identify Entry transactions among all Kaspa transactions without scanning every transaction's payload.
 
 ---
 
 ## Transaction Flow
 
+### Testnet Mode (Entry Address)
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        USER INTERFACE                            │
+│  1. User inputs amount and L2 address                           │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  1. User inputs:                                                 │
-│     • Amount (KAS)                                               │
-│     • L2 destination address (0x...)                             │
+│  2. Fetch UTXOs from Kaspa Testnet-10                           │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  2. Fetch UTXOs from Kaspa network via RPC                       │
+│  3. Mine TX ID with prefix "97b4"                               │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  3. TX ID Mining Loop:                                           │
-│     • Construct Entry payload with current nonce                 │
-│     • Build transaction (inputs, outputs, payload)               │
-│     • Compute TX ID                                              │
-│     • Check if TX ID starts with "97b4"                          │
-│     • If not, increment nonce and repeat                         │
+│  4. Build transaction:                                          │
+│     • Output 0: Entry Address (wrap amount)                     │
+│     • Output 1: Sender Address (change)                         │
+│     • Payload: Entry payload with L2 address                    │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  4. Transaction signing via Kastle wallet                        │
-│     • User approves transaction in wallet extension              │
+│  5. Sign via Kastle wallet and broadcast                        │
 └─────────────────────────────────────────────────────────────────┘
                                 │
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│  5. Broadcast to Kaspa network                                   │
-└─────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼
-┌─────────────────────────────────────────────────────────────────┐
-│  6. Viaduct detects TX (97b4 prefix)                             │
-│     • Parses Entry payload                                       │
-│     • IgReth increases iKAS balance via EVM withdrawal           │
+│  6. Viaduct detects TX (97b4 prefix)                            │
+│     • IgReth credits iKAS to L2 address                         │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+### Test Mainnet Mode (Self-Send)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  1. User inputs amount and L2 address                           │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  2. Fetch UTXOs from Kaspa Mainnet                              │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  3. Mine TX ID with prefix "97b5"                               │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  4. Build transaction:                                          │
+│     • Output 0: Sender Address (wrap amount - SELF SEND)        │
+│     • Output 1: Sender Address (change)                         │
+│     • Payload: Entry payload with L2 address                    │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  5. Sign via Kastle wallet and broadcast                        │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  6. Viaduct detects TX (97b5 prefix)                            │
+│     • IgReth credits iKAS to L2 address                         │
+│     • User's KAS remains in their wallet                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Difference**: In self-send mode, the wrap amount output goes back to the sender's own address instead of an Entry address. The KAS is effectively "tagged" with the Entry payload but never leaves the user's control.
 
 ---
 
 ## Transaction Structure
-
-The Kaspa transaction is structured as follows:
 
 ### Inputs
 - User's UTXOs sufficient to cover `amount + fee`
 
 ### Outputs
 
+#### Testnet Mode
 | Index | Recipient | Value | Purpose |
 |-------|-----------|-------|---------|
 | 0 | Entry Address | Wrap amount | KAS locking UTXO (must be first output) |
+| 1 | Sender Address | Remaining balance - fee | Change output |
+
+#### Test Mainnet Mode (Self-Send)
+| Index | Recipient | Value | Purpose |
+|-------|-----------|-------|---------|
+| 0 | Sender Address | Wrap amount | Self-send UTXO (must be first output) |
 | 1 | Sender Address | Remaining balance - fee | Change output |
 
 ### Payload
@@ -190,15 +256,18 @@ The bridge integrates with the [Kastle wallet](https://chromewebstore.google.com
 | Insufficient fee | Transaction mass exceeds fee | Increase fee allocation |
 | Orphan transaction | UTXOs spent before broadcast | Retry with fresh UTXOs |
 | TX ID mining timeout | Failed to find matching prefix | Increase max iterations or retry |
+| Wrong network | Wallet network doesn't match bridge mode | Switch Kastle to correct network |
 
 ---
 
 ## Security Considerations
 
-1. **TX ID Verification**: Always verify the broadcast TX ID matches the expected `97b4` prefix before confirming success to the user.
+1. **TX ID Verification**: Always verify the broadcast TX ID matches the expected prefix before confirming success to the user.
 
 2. **UTXO Freshness**: UTXOs can become stale between mining and broadcast. Implement retry logic for failed broadcasts.
 
 3. **Amount Validation**: Enforce minimum wrap amount (1 KAS) to prevent dust attacks.
 
 4. **Address Validation**: Validate L2 addresses match the Ethereum address format (`0x` + 40 hex characters).
+
+5. **Network Mismatch**: Verify the connected wallet network matches the selected bridge mode (testnet vs mainnet).

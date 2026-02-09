@@ -1,59 +1,62 @@
-# Igra Bridge
+# Igra KAS Bridge
 
-Bridge TKAS from Kaspa Testnet-10 (L1) to iKAS on Igra Galleon Testnet (L2).
+A web-based bridge for wrapping KAS from Kaspa L1 into iKAS on Igra L2. Supports both testnet and mainnet configurations.
+
+## Features
+
+- **Dual Network Support**: Switch between Galleon Testnet and Galleon Test Mainnet
+- **Browser-Based**: No backend required—runs entirely in the browser
+- **Kastle Integration**: Seamless wallet connection for transaction signing
+- **TX ID Mining**: Automated nonce mining to achieve required transaction ID prefixes
+
+## Network Modes
+
+| Mode | L1 Network | L2 Network | TX ID Prefix | Mechanism |
+|------|------------|------------|--------------|-----------|
+| **Galleon Testnet** | Kaspa Testnet-10 | Igra Galleon Testnet | `97b4` | KAS sent to Entry address |
+| **Galleon Test Mainnet** | Kaspa Mainnet | Igra Galleon Test Mainnet | `97b5` | KAS sent to self (never leaves wallet) |
+
+### Galleon Testnet
+
+Wrap TKAS from Kaspa Testnet-10 to receive iKAS on Igra Galleon Testnet. KAS is sent to a designated Entry address where it is locked.
+
+### Galleon Test Mainnet
+
+Wrap KAS from Kaspa Mainnet to receive iKAS on Igra Galleon Test Mainnet. In this mode, **KAS never leaves your wallet**—the transaction sends KAS back to your own address with an Entry payload. The Igra network detects this tagged transaction and mints iKAS accordingly.
 
 ## How It Works
 
-1. **Connect Wallet** - Connect your Kastle browser extension wallet
-2. **Enter Details** - Specify amount (min 1 KAS) and your L2 address (0x...)
-3. **TX ID Mining** - The bridge mines a nonce until the transaction ID matches the required `97b4` prefix
-4. **Sign & Broadcast** - Kastle signs the pre-built transaction and broadcasts to Kaspa network
-5. **Receive iKAS** - Igra L2 processes the transaction and mints iKAS to your L2 address
-
-## Technical Details
-
-### Entry Transaction (TxTypeId: 0x2)
-
-The bridge constructs an Igra Entry transaction with the following payload format:
-
-```
-[0x92] [20-byte L2 address] [8-byte amount (LE)] [4-byte nonce (BE)]
-```
-
-- **0x92**: Version (0x9) + TxTypeId (0x2)
-- **L2 Address**: 20 bytes - Ethereum-style address to receive iKAS
-- **Amount**: 8 bytes little-endian - Amount in SOMPI (1 KAS = 100,000,000 SOMPI)
-- **Nonce**: 4 bytes big-endian - Mined to achieve required TX ID prefix
-
-### TX ID Mining
-
-Igra requires L1 transaction IDs to start with `97b4`. The bridge:
-
-1. Connects to Kaspa network via WASM SDK Resolver (auto-discovers public nodes)
-2. Fetches UTXOs for the sender's address
-3. Builds a transaction with the Entry payload
-4. Iterates nonces until `Transaction.id` starts with `97b4`
-5. Serializes to JSON and sends to Kastle for signing
-
-Typical mining time: 1-3 seconds (~30,000-100,000 iterations)
-
-### KAS Locking UTXO
-
-The first output of the L1 transaction sends the bridged KAS to the Entry address:
-```
-kaspatest:qqmstl2znv9tsfgcmj9shme82my867tapz7pdu4ztwdn6sm9452jj5mm0sxzw
-```
+1. **Connect Wallet** — Connect your Kastle browser extension
+2. **Select Network** — Choose between Testnet or Test Mainnet
+3. **Enter Details** — Specify amount (min 1 KAS) and your L2 address (0x...)
+4. **TX ID Mining** — The bridge mines a nonce until the TX ID matches the required prefix
+5. **Sign & Broadcast** — Kastle signs the transaction and broadcasts to Kaspa
+6. **Receive iKAS** — Igra L2 processes the transaction and credits iKAS to your L2 address
 
 ## Configuration
 
+### Galleon Testnet
+
 | Parameter | Value |
 |-----------|-------|
-| L1 Network | Kaspa testnet-10 |
+| L1 Network | Kaspa Testnet-10 |
 | L2 Network | Igra Galleon Testnet |
-| L2 RPC | https://galleon-testnet.igralabs.com:8545 |
+| L2 RPC | `https://galleon-testnet.igralabs.com:8545` |
 | L2 Chain ID | 38836 |
-| Entry Address | kaspatest:qqmstl2znv9tsfgcmj9shme82my867tapz7pdu4ztwdn6sm9452jj5mm0sxzw |
-| TX ID Prefix | 97b4 |
+| Entry Address | `kaspatest:qqmstl2znv9tsfgcmj9shme82my867tapz7pdu4ztwdn6sm9452jj5mm0sxzw` |
+| TX ID Prefix | `97b4` |
+| Min Amount | 1 KAS |
+
+### Galleon Test Mainnet
+
+| Parameter | Value |
+|-----------|-------|
+| L1 Network | Kaspa Mainnet |
+| L2 Network | Igra Galleon Test Mainnet |
+| L2 RPC | `https://galleon.igralabs.com:8545` |
+| L2 Chain ID | 38837 |
+| Entry Address | Self (sender's own address) |
+| TX ID Prefix | `97b5` |
 | Min Amount | 1 KAS |
 
 ## Development
@@ -61,16 +64,17 @@ kaspatest:qqmstl2znv9tsfgcmj9shme82my867tapz7pdu4ztwdn6sm9452jj5mm0sxzw
 ### Prerequisites
 
 - Node.js 18+
-- Kastle browser extension wallet
-- Kaspa WASM SDK (in `public/kaspa/`)
+- [Kastle](https://chromewebstore.google.com/detail/kastle/oambclflhjfppdmkghokjmpppmaebego) browser extension wallet
+- Kaspa WASM SDK (included in `public/kaspa/`)
 
 ### Setup
 
 ```bash
-cd projects/igra-bridge
 npm install
 npm run dev
 ```
+
+Open http://localhost:3000 in your browser.
 
 ### Build
 
@@ -78,33 +82,57 @@ npm run dev
 npm run build
 ```
 
-### Project Structure
+Production files are output to `dist/`.
+
+### Production Server
+
+```bash
+npm run build
+npm start
+```
+
+Uses [serve](https://github.com/vercel/serve) for static file hosting with proper WASM MIME types.
+
+## Project Structure
 
 ```
 src/
-├── config.ts      # Network and bridge configuration
-├── kastle.ts      # Kastle wallet integration
-├── kaspa-wasm.ts  # WASM SDK loader
-├── tx-miner.ts    # TX ID mining logic
-├── bridge.ts      # Entry transaction construction
-└── main.ts        # UI and state management
+├── config.ts       # Network configuration and utilities
+├── kastle.ts       # Kastle wallet integration
+├── kaspa-wasm.ts   # WASM SDK loader
+├── tx-miner.ts     # TX ID mining and transaction building
+├── bridge.ts       # Entry transaction construction
+└── main.ts         # UI and state management
 
 public/
-└── kaspa/         # Kaspa WASM SDK files
-    ├── kaspa.js
-    ├── kaspa.d.ts
-    └── kaspa_bg.wasm
+├── kaspa/          # Kaspa WASM SDK files
+│   ├── kaspa.js
+│   ├── kaspa.d.ts
+│   └── kaspa_bg.wasm
+└── serve.json      # Static server MIME type configuration
+
+docs/
+├── kas-bridge-integration.md   # Technical integration docs
+└── node-requirements.md        # Igra node hardware requirements
 ```
+
+## Technical Documentation
+
+For detailed technical documentation on the Entry transaction format, TX ID mining, and integration details, see [docs/kas-bridge-integration.md](docs/kas-bridge-integration.md).
 
 ## Dependencies
 
-- **Kaspa WASM SDK** - Transaction construction and TX ID computation
-- **Kastle Wallet** - Signing and broadcasting transactions
-- **Vite** - Development server and build tool
-- **TypeScript** - Type safety
+- **[Kaspa WASM SDK](https://github.com/aspect-rs/kaspa-wasm)** — Transaction construction and TX ID computation
+- **[Kastle Wallet](https://github.com/aspect-rs/kastle)** — Transaction signing and broadcasting
+- **[Vite](https://vitejs.dev/)** — Development server and build tool
+- **[TypeScript](https://www.typescriptlang.org/)** — Type safety
 
 ## References
 
 - [Igra Transaction Protocol](https://igra-labs.gitbook.io/igralabs-docs/for-developers/architecture/specifications/igra-transaction-protocol)
 - [Kastle Wallet API](https://github.com/forbole/kastle/blob/main/api/browser.ts)
 - [Kaspa WASM SDK](https://github.com/kaspanet/rusty-kaspa)
+
+## License
+
+MIT
