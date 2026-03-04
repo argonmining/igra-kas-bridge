@@ -102,7 +102,7 @@ const SHARED = {
 } as const;
 
 // Current network state
-let currentMode: NetworkMode = 'testnet';
+let currentMode: NetworkMode = 'mainnet';
 
 /**
  * Get the current network mode

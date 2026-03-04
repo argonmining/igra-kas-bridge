@@ -414,20 +414,21 @@
   <div class="container">
     <header>
       <h1>Igra Bridge</h1>
-      <p id="page-subtitle" class="subtitle">Bridge TKAS from Kaspa Testnet to iKAS on Igra Galleon</p>
+      <p id="page-subtitle" class="subtitle">Bridge KAS from Kaspa Mainnet to iKAS on Igra Mainnet</p>
     </header>
 
     <!-- Network Selector -->
     <div class="network-selector">
-      <button id="network-testnet-btn" class="active">Galleon Testnet</button>
+      <button id="network-testnet-btn">Galleon Testnet</button>
       <!-- <button id="network-test-mainnet-btn">Galleon Test Mainnet</button> -->
-      <button id="network-mainnet-btn">Igra Mainnet</button>
+      <button id="network-mainnet-btn" class="active">Igra Mainnet</button>
     </div>
 
     <div id="info-banner" class="info-banner">
-      <strong>Testnet Bridge</strong><br>
-      This bridge transfers tKAS from Kaspa Testnet-10 to iKAS on Igra Galleon Testnet.
-      Minimum amount: 1 KAS. Ensure your Kastle wallet is set to testnet-10.
+      <strong>Igra Mainnet Bridge</strong><br>
+      This bridge wraps KAS from Kaspa Mainnet into iKAS on Igra Mainnet.
+      KAS is sent to the Entry address.
+      Minimum amount: 10 KAS. Maximum amount: 300 KAS. Ensure your Kastle wallet is set to mainnet.
     </div>
 
     <div id="error-message" class="error-message"></div>
@@ -461,11 +462,12 @@
         <input
           type="number"
           id="amount-input"
-          min="1"
+          min="10"
+          max="300"
           step="0.00000001"
-          placeholder="Min: 1 KAS"
+          placeholder="10 – 300 KAS"
         />
-        <div class="input-hint">Amount of KAS to bridge to Igra (minimum 1 KAS)</div>
+        <div class="input-hint">Amount of KAS to bridge to Igra (10 – 300 KAS)</div>
       </div>
 
       <div class="form-group">
@@ -479,7 +481,7 @@
       </div>
 
       <button id="bridge-btn" class="btn-primary">
-        Bridge TKAS → iKAS
+        Bridge KAS → iKAS
       </button>
     </div>
 
