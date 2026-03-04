@@ -2,10 +2,10 @@
  * Igra Bridge Configuration
  *
  * Configuration for bridging KAS from Kaspa L1 to iKAS on Igra L2.
- * Supports both Galleon Testnet (testnet-10) and Galleon Test Mainnet (mainnet).
+ * Supports Galleon Testnet, Galleon Test Mainnet, and Igra Mainnet.
  */
 
-export type NetworkMode = 'testnet' | 'test-mainnet';
+export type NetworkMode = 'testnet' | 'test-mainnet' | 'mainnet';
 
 export interface NetworkConfig {
   L1: {
@@ -64,6 +64,24 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       BLOCK_EXPLORER: 'https://explorer.galleon.igralabs.com',
     },
   },
+  mainnet: {
+    L1: {
+      NETWORK_ID: 'mainnet',
+      ENTRY_ADDRESS: 'kaspa:ppvnxxzm0rr37zpnwux2f2ntvfpr4uqdpm7zsvsztg3en92r7gs0wkmr72q9n',
+      TX_ID_PREFIX: '97b1',
+      MIN_BRIDGE_AMOUNT_KAS: 10,
+      SOMPI_PER_KAS: 100_000_000n,
+      EXPLORER_BASE: 'https://explorer.kaspa.org',
+    },
+    L2: {
+      NETWORK_NAME: 'Igra Mainnet',
+      RPC_URL: 'https://rpc.igralabs.com:8545',
+      CHAIN_ID: 38833,
+      CURRENCY_SYMBOL: 'iKAS',
+      CURRENCY_DECIMALS: 18,
+      BLOCK_EXPLORER: 'https://explorer.igralabs.com',
+    },
+  },
 };
 
 // Shared constants (same across all networks)
@@ -118,7 +136,7 @@ export function isValidL2Address(address: string): boolean {
  * Validates a Kaspa address for the current network
  */
 export function isValidKaspaAddress(address: string): boolean {
-  if (currentMode === 'test-mainnet') {
+  if (currentMode === 'test-mainnet' || currentMode === 'mainnet') {
     return address.startsWith('kaspa:');
   }
   return address.startsWith('kaspatest:');

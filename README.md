@@ -1,20 +1,21 @@
 # Igra KAS Bridge
 
-A web-based bridge for wrapping KAS from Kaspa L1 into iKAS on Igra L2. Supports both testnet and mainnet configurations.
+A web-based bridge for wrapping KAS from Kaspa L1 into iKAS on Igra L2. Supports testnet, test mainnet, and production mainnet configurations.
 
 ## Features
 
-- **Dual Network Support**: Switch between Galleon Testnet and Galleon Test Mainnet
+- **Multi-Network Support**: Switch between Galleon Testnet, Galleon Test Mainnet, and Igra Mainnet
 - **Browser-Based**: No backend required—runs entirely in the browser
 - **Kastle Integration**: Seamless wallet connection for transaction signing
 - **TX ID Mining**: Automated nonce mining to achieve required transaction ID prefixes
 
 ## Network Modes
 
-| Mode | L1 Network | L2 Network | TX ID Prefix | Mechanism |
-|------|------------|------------|--------------|-----------|
-| **Galleon Testnet** | Kaspa Testnet-10 | Igra Galleon Testnet | `97b4` | KAS sent to Entry address |
-| **Galleon Test Mainnet** | Kaspa Mainnet | Igra Galleon Test Mainnet | `97b5` | KAS sent to self (never leaves wallet) |
+| Mode | L1 Network | L2 Network | TX ID Prefix | Min Amount | Mechanism |
+|------|------------|------------|--------------|------------|-----------|
+| **Galleon Testnet** | Kaspa Testnet-10 | Igra Galleon Testnet | `97b4` | 1 KAS | KAS sent to Entry address |
+| **Galleon Test Mainnet** | Kaspa Mainnet | Igra Galleon Test Mainnet | `97b5` | 1 KAS | KAS sent to self (never leaves wallet) |
+| **Igra Mainnet** | Kaspa Mainnet | Igra Mainnet | `97b1` | 10 KAS | KAS sent to Entry address |
 
 ### Galleon Testnet
 
@@ -24,11 +25,15 @@ Wrap TKAS from Kaspa Testnet-10 to receive iKAS on Igra Galleon Testnet. KAS is 
 
 Wrap KAS from Kaspa Mainnet to receive iKAS on Igra Galleon Test Mainnet. In this mode, **KAS never leaves your wallet**—the transaction sends KAS back to your own address with an Entry payload. The Igra network detects this tagged transaction and mints iKAS accordingly.
 
+### Igra Mainnet
+
+Wrap KAS from Kaspa Mainnet to receive iKAS on Igra Mainnet. KAS is sent to the Entry address where it is locked. Minimum amount is 10 KAS as DDoS protection.
+
 ## How It Works
 
 1. **Connect Wallet** — Connect your Kastle browser extension
-2. **Select Network** — Choose between Testnet or Test Mainnet
-3. **Enter Details** — Specify amount (min 1 KAS) and your L2 address (0x...)
+2. **Select Network** — Choose between Galleon Testnet, Galleon Test Mainnet, or Igra Mainnet
+3. **Enter Details** — Specify amount and your L2 address (0x...)
 4. **TX ID Mining** — The bridge mines a nonce until the TX ID matches the required prefix
 5. **Sign & Broadcast** — Kastle signs the transaction and broadcasts to Kaspa
 6. **Receive iKAS** — Igra L2 processes the transaction and credits iKAS to your L2 address
@@ -58,6 +63,18 @@ Wrap KAS from Kaspa Mainnet to receive iKAS on Igra Galleon Test Mainnet. In thi
 | Entry Address | Self (sender's own address) |
 | TX ID Prefix | `97b5` |
 | Min Amount | 1 KAS |
+
+### Igra Mainnet
+
+| Parameter | Value |
+|-----------|-------|
+| L1 Network | Kaspa Mainnet |
+| L2 Network | Igra Mainnet |
+| L2 RPC | `https://rpc.igralabs.com:8545` |
+| L2 Chain ID | 38833 |
+| Entry Address | `kaspa:ppvnxxzm0rr37zpnwux2f2ntvfpr4uqdpm7zsvsztg3en92r7gs0wkmr72q9n` |
+| TX ID Prefix | `97b1` |
+| Min Amount | 10 KAS |
 
 ## Development
 

@@ -40,6 +40,7 @@ const elements = {
 
   // Network selector
   networkTestnetBtn: () => document.getElementById('network-testnet-btn') as HTMLButtonElement,
+  networkTestMainnetBtn: () => document.getElementById('network-test-mainnet-btn') as HTMLButtonElement,
   networkMainnetBtn: () => document.getElementById('network-mainnet-btn') as HTMLButtonElement,
   infoBanner: () => document.getElementById('info-banner')!,
   pageSubtitle: () => document.getElementById('page-subtitle')!,
@@ -79,6 +80,17 @@ function clearError(): void {
  */
 function getLabels() {
   const mode = getNetworkMode();
+  if (mode === 'mainnet') {
+    return {
+      kasSymbol: 'KAS',
+      bridgeAction: 'Bridge KAS → iKAS',
+      subtitle: 'Bridge KAS from Kaspa Mainnet to iKAS on Igra Mainnet',
+      bannerHtml: `<strong>Igra Mainnet Bridge</strong><br>
+        This bridge wraps KAS from Kaspa Mainnet into iKAS on Igra Mainnet.
+        KAS is sent to the Entry address.
+        Minimum amount: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS. Ensure your Kastle wallet is set to mainnet.`,
+    };
+  }
   if (mode === 'test-mainnet') {
     return {
       kasSymbol: 'KAS',
@@ -109,9 +121,11 @@ function updateNetworkUI(): void {
 
   // Toggle button active states
   const testnetBtn = elements.networkTestnetBtn();
+  const testMainnetBtn = elements.networkTestMainnetBtn();
   const mainnetBtn = elements.networkMainnetBtn();
   testnetBtn.classList.toggle('active', mode === 'testnet');
-  mainnetBtn.classList.toggle('active', mode === 'test-mainnet');
+  testMainnetBtn.classList.toggle('active', mode === 'test-mainnet');
+  mainnetBtn.classList.toggle('active', mode === 'mainnet');
 
   // Update dynamic text
   elements.pageSubtitle().textContent = labels.subtitle;
@@ -148,6 +162,10 @@ async function handleNetworkSwitch(mode: NetworkMode): Promise<void> {
     log(`Entry mode: self-send (KAS sent to your own address)`);
   }
   log(`Required TX Prefix: ${CONFIG.L1.TX_ID_PREFIX}`);
+
+  // Update min amount for the new network
+  elements.amountInput().min = CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS.toString();
+  elements.amountInput().placeholder = `Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS`;
 
   if (!isKastleInstalled()) {
     log('Kastle wallet not detected. Please install the extension.');
@@ -381,7 +399,8 @@ async function init(): Promise<void> {
 
   // Network selector listeners
   elements.networkTestnetBtn().addEventListener('click', () => handleNetworkSwitch('testnet'));
-  elements.networkMainnetBtn().addEventListener('click', () => handleNetworkSwitch('test-mainnet'));
+  // elements.networkTestMainnetBtn().addEventListener('click', () => handleNetworkSwitch('test-mainnet'));
+  elements.networkMainnetBtn().addEventListener('click', () => handleNetworkSwitch('mainnet'));
 
   // Set minimum amount
   elements.amountInput().min = CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS.toString();
