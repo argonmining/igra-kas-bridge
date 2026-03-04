@@ -121,10 +121,10 @@ function updateNetworkUI(): void {
 
   // Toggle button active states
   const testnetBtn = elements.networkTestnetBtn();
-  const testMainnetBtn = elements.networkTestMainnetBtn();
+  const testMainnetBtn = document.getElementById('network-test-mainnet-btn');
   const mainnetBtn = elements.networkMainnetBtn();
   testnetBtn.classList.toggle('active', mode === 'testnet');
-  testMainnetBtn.classList.toggle('active', mode === 'test-mainnet');
+  testMainnetBtn?.classList.toggle('active', mode === 'test-mainnet');
   mainnetBtn.classList.toggle('active', mode === 'mainnet');
 
   // Update dynamic text
