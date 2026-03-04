@@ -131,12 +131,16 @@ export function validateBridgeParams(params: BridgeParams): void {
   const { amountKas, l2Address } = params;
 
   // Validate amount
+  if (!Number.isFinite(amountKas) || amountKas <= 0) {
+    throw new Error('Invalid amount');
+  }
+
   if (amountKas < CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS) {
     throw new Error(`Minimum bridge amount is ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS`);
   }
 
-  if (!Number.isFinite(amountKas) || amountKas <= 0) {
-    throw new Error('Invalid amount');
+  if (CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS !== null && amountKas > CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS) {
+    throw new Error(`Maximum bridge amount is ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS} KAS`);
   }
 
   // Validate L2 address

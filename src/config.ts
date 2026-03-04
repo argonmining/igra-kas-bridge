@@ -14,6 +14,7 @@ export interface NetworkConfig {
     readonly ENTRY_ADDRESS: string | null;
     readonly TX_ID_PREFIX: string;
     readonly MIN_BRIDGE_AMOUNT_KAS: number;
+    readonly MAX_BRIDGE_AMOUNT_KAS: number | null;
     readonly SOMPI_PER_KAS: bigint;
     readonly EXPLORER_BASE: string;
   };
@@ -34,6 +35,7 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       ENTRY_ADDRESS: 'kaspatest:qqmstl2znv9tsfgcmj9shme82my867tapz7pdu4ztwdn6sm9452jj5mm0sxzw',
       TX_ID_PREFIX: '97b4',
       MIN_BRIDGE_AMOUNT_KAS: 1,
+      MAX_BRIDGE_AMOUNT_KAS: null,
       SOMPI_PER_KAS: 100_000_000n,
       EXPLORER_BASE: 'https://explorer-tn10.kaspa.org',
     },
@@ -52,6 +54,7 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       ENTRY_ADDRESS: null, // Self-send: KAS goes back to sender's own address
       TX_ID_PREFIX: '97b5',
       MIN_BRIDGE_AMOUNT_KAS: 1,
+      MAX_BRIDGE_AMOUNT_KAS: null,
       SOMPI_PER_KAS: 100_000_000n,
       EXPLORER_BASE: 'https://explorer.kaspa.org',
     },
@@ -70,6 +73,7 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       ENTRY_ADDRESS: 'kaspa:ppvnxxzm0rr37zpnwux2f2ntvfpr4uqdpm7zsvsztg3en92r7gs0wkmr72q9n',
       TX_ID_PREFIX: '97b1',
       MIN_BRIDGE_AMOUNT_KAS: 10,
+      MAX_BRIDGE_AMOUNT_KAS: 100,
       SOMPI_PER_KAS: 100_000_000n,
       EXPLORER_BASE: 'https://explorer.kaspa.org',
     },

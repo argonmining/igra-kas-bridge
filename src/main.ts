@@ -163,9 +163,16 @@ async function handleNetworkSwitch(mode: NetworkMode): Promise<void> {
   }
   log(`Required TX Prefix: ${CONFIG.L1.TX_ID_PREFIX}`);
 
-  // Update min amount for the new network
-  elements.amountInput().min = CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS.toString();
-  elements.amountInput().placeholder = `Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS`;
+  // Update amount constraints for the new network
+  const amountInput = elements.amountInput();
+  amountInput.min = CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS.toString();
+  if (CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS !== null) {
+    amountInput.max = CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS.toString();
+    amountInput.placeholder = `${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} – ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS} KAS`;
+  } else {
+    amountInput.removeAttribute('max');
+    amountInput.placeholder = `Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS`;
+  }
 
   if (!isKastleInstalled()) {
     log('Kastle wallet not detected. Please install the extension.');
@@ -263,6 +270,11 @@ async function handleBridge(): Promise<void> {
   const amount = parseFloat(amountStr);
   if (isNaN(amount) || amount < CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS) {
     showError(`Minimum amount is ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS`);
+    return;
+  }
+
+  if (CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS !== null && amount > CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS) {
+    showError(`Maximum amount is ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS} KAS per transaction`);
     return;
   }
 
@@ -402,9 +414,14 @@ async function init(): Promise<void> {
   // elements.networkTestMainnetBtn().addEventListener('click', () => handleNetworkSwitch('test-mainnet'));
   elements.networkMainnetBtn().addEventListener('click', () => handleNetworkSwitch('mainnet'));
 
-  // Set minimum amount
+  // Set amount constraints
   elements.amountInput().min = CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS.toString();
-  elements.amountInput().placeholder = `Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS`;
+  if (CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS !== null) {
+    elements.amountInput().max = CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS.toString();
+    elements.amountInput().placeholder = `${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} – ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS} KAS`;
+  } else {
+    elements.amountInput().placeholder = `Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS`;
+  }
 
   // Initial UI state
   updateNetworkUI();
