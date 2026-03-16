@@ -65,34 +65,17 @@ export async function connectWallet(): Promise<string> {
 }
 
 /**
- * Map Kasware's network value to the igra bridge network ID.
- *
- * Kasware docs state getNetwork() returns 'livenet' | 'testnet',
- * but some versions may return a numeric value. We handle both defensively.
+ * Force Kasware to the correct network via switchNetwork().
+ * Kasware's getNetwork() return values are inconsistent across versions,
+ * so we match the krc-bridge approach: switch rather than read-and-compare.
  */
-function mapKaswareNetwork(raw: string | number): string {
-  const val = typeof raw === 'number' ? String(raw) : raw.toLowerCase().trim();
-
-  if (val === 'livenet' || val === 'mainnet' || val === '0' || val === 'kaspa_mainnet') {
-    return 'mainnet';
-  }
-  if (val === 'testnet' || val === '1' || val === 'testnet-10') {
-    return 'testnet-10';
-  }
-
-  return val;
-}
-
-export async function getNetwork(): Promise<string> {
-  const kasware = getKasware();
-  const raw = await kasware.getNetwork();
-  return mapKaswareNetwork(raw);
-}
-
 export async function verifyNetwork(): Promise<boolean> {
   try {
-    const network = await getNetwork();
-    return network === CONFIG.L1.NETWORK_ID;
+    const kasware = getKasware();
+    const target = CONFIG.L1.NETWORK_ID;
+    const kaswareNetwork = target === 'mainnet' ? 'kaspa_mainnet' : 'testnet';
+    await kasware.switchNetwork(kaswareNetwork);
+    return true;
   } catch {
     return false;
   }
