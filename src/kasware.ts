@@ -83,7 +83,7 @@ export async function ensureNetwork(): Promise<void> {
   try {
     const kasware = getKasware();
     const target = CONFIG.L1.NETWORK_ID;
-    const kaswareNetwork = target === 'mainnet' ? 'kaspa_mainnet' : 'testnet';
+    const kaswareNetwork = target === 'mainnet' ? 'kaspa_mainnet' : 'kaspa_testnet_10';
     await kasware.switchNetwork(kaswareNetwork);
   } catch {
     // Swallow — verification happens via address prefix
