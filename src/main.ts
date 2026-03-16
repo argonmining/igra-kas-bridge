@@ -242,15 +242,30 @@ function updateUI(): void {
 
     kastleBtn.disabled = true;
     kaswareBtn.disabled = true;
+    kastleBtn.removeAttribute('data-tooltip');
+    kaswareBtn.removeAttribute('data-tooltip');
     walletSelector.setAttribute('data-tooltip', 'Disconnect your wallet before switching');
   } else {
     walletStatus.textContent = 'Not connected';
     walletStatus.className = 'status-value';
     walletAddress.textContent = '-';
-
-    kastleBtn.disabled = !isKastleInstalled();
-    kaswareBtn.disabled = !isKaswareInstalled();
     walletSelector.removeAttribute('data-tooltip');
+
+    const kastleInstalled = isKastleInstalled();
+    const kaswareInstalled = isKaswareInstalled();
+    kastleBtn.disabled = !kastleInstalled;
+    kaswareBtn.disabled = !kaswareInstalled;
+
+    if (!kastleInstalled) {
+      kastleBtn.setAttribute('data-tooltip', 'Kastle not detected — install from Chrome Web Store');
+    } else {
+      kastleBtn.removeAttribute('data-tooltip');
+    }
+    if (!kaswareInstalled) {
+      kaswareBtn.setAttribute('data-tooltip', 'Kasware not detected — install from Chrome Web Store');
+    } else {
+      kaswareBtn.removeAttribute('data-tooltip');
+    }
 
     if (selectedWalletType) {
       const walletName = selectedWalletType === 'kastle' ? 'Kastle' : 'Kasware';

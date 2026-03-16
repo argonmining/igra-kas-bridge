@@ -366,6 +366,7 @@
       align-items: center;
       justify-content: center;
       gap: 0.35rem;
+      position: relative;
     }
 
     .wallet-selector button img {
@@ -396,7 +397,8 @@
       cursor: default;
     }
 
-    .wallet-selector[data-tooltip]:hover::after {
+    .wallet-selector[data-tooltip]:hover::after,
+    .wallet-selector button[data-tooltip]:hover::after {
       content: attr(data-tooltip);
       position: absolute;
       bottom: calc(100% + 6px);
@@ -411,6 +413,11 @@
       white-space: nowrap;
       z-index: 10;
       pointer-events: none;
+      font-weight: 400;
+    }
+
+    .wallet-selector button[data-tooltip]:disabled {
+      pointer-events: auto;
     }
 
     footer {
