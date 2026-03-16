@@ -65,19 +65,40 @@ export async function connectWallet(): Promise<string> {
 }
 
 /**
- * Force Kasware to the correct network via switchNetwork().
- * Kasware's getNetwork() return values are inconsistent across versions,
- * so we match the krc-bridge approach: switch rather than read-and-compare.
+ * Verify the connected address belongs to the expected network.
+ * kaspa: prefix = mainnet, kaspatest: prefix = testnet-10.
+ * Deterministic — no wallet API calls required.
  */
-export async function verifyNetwork(): Promise<boolean> {
+export function verifyNetworkByAddress(address: string): boolean {
+  const target = CONFIG.L1.NETWORK_ID;
+  if (target === 'mainnet') return address.startsWith('kaspa:');
+  return address.startsWith('kaspatest:');
+}
+
+/**
+ * Attempt to switch Kasware to the expected network.
+ * Swallows errors — actual verification is done via address prefix.
+ */
+export async function ensureNetwork(): Promise<void> {
   try {
     const kasware = getKasware();
     const target = CONFIG.L1.NETWORK_ID;
     const kaswareNetwork = target === 'mainnet' ? 'kaspa_mainnet' : 'testnet';
     await kasware.switchNetwork(kaswareNetwork);
-    return true;
   } catch {
-    return false;
+    // Swallow — verification happens via address prefix
+  }
+}
+
+/**
+ * Disconnect Kasware wallet from this origin.
+ */
+export async function disconnectWallet(): Promise<void> {
+  try {
+    const kasware = getKasware();
+    await kasware.disconnect(window.location.origin);
+  } catch {
+    // Wallet may already be disconnected
   }
 }
 

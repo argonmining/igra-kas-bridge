@@ -6,8 +6,8 @@
  */
 
 import { CONFIG, sompiToKas, isValidL2Address, getNetworkMode, setNetworkMode, getMainnetFee, type NetworkMode } from './config';
-import { isKastleInstalled, connectWallet as kastleConnect, verifyNetwork as kastleVerifyNetwork } from './kastle';
-import { isKaswareInstalled, connectWallet as kaswareConnect, verifyNetwork as kaswareVerifyNetwork } from './kasware';
+import { isKastleInstalled, connectWallet as kastleConnect, verifyNetworkByAddress, ensureNetwork as kastleEnsureNetwork, disconnectWallet as kastleDisconnect } from './kastle';
+import { isKaswareInstalled, connectWallet as kaswareConnect, ensureNetwork as kaswareEnsureNetwork, disconnectWallet as kaswareDisconnect } from './kasware';
 import { executeBridge, executeBridgeWithMining, isMiningAvailable, getExplorerUrl, getL2ExplorerUrl, BridgeResult } from './bridge';
 import { initKaspaWasm } from './kaspa-wasm';
 import { disconnectRpc } from './tx-miner';
@@ -149,11 +149,20 @@ function updateNetworkUI(): void {
 async function handleNetworkSwitch(mode: NetworkMode): Promise<void> {
   if (mode === getNetworkMode()) return;
 
-  setNetworkMode(mode);
+  // Disconnect wallet extension before switching
+  if (connectedWallet) {
+    if (connectedWallet.type === 'kastle') await kastleDisconnect();
+    else await kaswareDisconnect();
+  }
 
-  // Disconnect wallet — user must reconnect on the new network
+  setNetworkMode(mode);
   connectedWallet = null;
   await disconnectRpc();
+
+  // Reset network status
+  const networkStatus = elements.networkStatus();
+  networkStatus.textContent = '-';
+  networkStatus.className = 'status-value';
 
   updateNetworkUI();
   updateUI();
@@ -237,8 +246,8 @@ function updateUI(): void {
     walletStatus.textContent = `Connected (${walletName})`;
     walletStatus.className = 'status-value connected';
     walletAddress.textContent = connectedWallet.address;
-    connectBtn.textContent = 'Connected';
-    connectBtn.disabled = true;
+    connectBtn.textContent = 'Disconnect';
+    connectBtn.disabled = false;
     bridgeSection.style.display = 'block';
   } else {
     walletStatus.textContent = 'Not connected';
@@ -285,6 +294,13 @@ async function handleConnect(): Promise<void> {
     elements.connectBtn().disabled = true;
     elements.connectBtn().textContent = 'Connecting...';
 
+    // Attempt to switch wallet to correct network (best-effort, may no-op)
+    if (selectedWalletType === 'kastle') {
+      await kastleEnsureNetwork();
+    } else {
+      await kaswareEnsureNetwork();
+    }
+
     let address: string;
     if (selectedWalletType === 'kastle') {
       const account = await kastleConnect();
@@ -293,24 +309,26 @@ async function handleConnect(): Promise<void> {
       address = await kaswareConnect();
     }
 
-    connectedWallet = { address, type: selectedWalletType };
-    log(`${walletName} wallet connected: ${address}`);
-
-    // Verify network
-    const correctNetwork = selectedWalletType === 'kastle'
-      ? await kastleVerifyNetwork()
-      : await kaswareVerifyNetwork();
+    // Verify network by address prefix (deterministic, bulletproof)
+    const correctNetwork = verifyNetworkByAddress(address);
     const networkStatus = elements.networkStatus();
 
     if (correctNetwork) {
+      connectedWallet = { address, type: selectedWalletType };
+      log(`${walletName} wallet connected: ${address}`);
       networkStatus.textContent = `${CONFIG.L1.NETWORK_ID}`;
       networkStatus.className = 'status-value connected';
       log(`Network verified: ${CONFIG.L1.NETWORK_ID}`);
     } else {
+      // Wrong network — disconnect and tell user to switch manually
+      if (selectedWalletType === 'kastle') await kastleDisconnect();
+      else await kaswareDisconnect();
+
       networkStatus.textContent = `Wrong network!`;
       networkStatus.className = 'status-value error';
-      showError(`Please switch ${walletName} wallet to ${CONFIG.L1.NETWORK_ID}`);
-      log(`WARNING: Wrong network. Please switch to ${CONFIG.L1.NETWORK_ID}`);
+      const got = address.startsWith('kaspatest:') ? 'testnet' : 'mainnet';
+      showError(`${walletName} is on ${got}. Please switch to ${CONFIG.L1.NETWORK_ID} and reconnect.`);
+      log(`WARNING: ${walletName} address is ${got}, expected ${CONFIG.L1.NETWORK_ID}`);
     }
 
     updateUI();
@@ -318,9 +336,29 @@ async function handleConnect(): Promise<void> {
     const msg = error instanceof Error ? error.message : 'Failed to connect wallet';
     showError(msg);
     log(`Connection error: ${msg}`);
-    elements.connectBtn().disabled = false;
-    elements.connectBtn().textContent = `Connect ${walletName}`;
+    updateUI();
   }
+}
+
+/**
+ * Handle wallet disconnection
+ */
+async function handleDisconnect(): Promise<void> {
+  if (!connectedWallet) return;
+
+  const walletName = connectedWallet.type === 'kastle' ? 'Kastle' : 'Kasware';
+
+  if (connectedWallet.type === 'kastle') await kastleDisconnect();
+  else await kaswareDisconnect();
+
+  connectedWallet = null;
+
+  const networkStatus = elements.networkStatus();
+  networkStatus.textContent = '-';
+  networkStatus.className = 'status-value';
+
+  log(`${walletName} wallet disconnected`);
+  updateUI();
 }
 
 /**
@@ -475,7 +513,10 @@ async function init(): Promise<void> {
   logWalletDetection();
 
   // Set up event listeners
-  elements.connectBtn().addEventListener('click', handleConnect);
+  elements.connectBtn().addEventListener('click', () => {
+    if (connectedWallet) handleDisconnect();
+    else handleConnect();
+  });
   elements.bridgeBtn().addEventListener('click', handleBridge);
 
   // Wallet selector listeners
