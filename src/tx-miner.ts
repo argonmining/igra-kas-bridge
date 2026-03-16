@@ -275,9 +275,9 @@ export async function mineTxId(
 }
 
 /**
- * Serialize transaction to JSON for Kastle signing
+ * Serialize transaction to JSON for wallet signing
  */
-export function serializeForKastle(tx: any): string {
+export function serializeTransaction(tx: any): string {
   return tx.serializeToSafeJSON();
 }
 

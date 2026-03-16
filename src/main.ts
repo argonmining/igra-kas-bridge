@@ -6,13 +6,16 @@
  */
 
 import { CONFIG, sompiToKas, isValidL2Address, getNetworkMode, setNetworkMode, getMainnetFee, type NetworkMode } from './config';
-import { isKastleInstalled, connectWallet, verifyNetwork, KastleAccount } from './kastle';
+import { isKastleInstalled, connectWallet as kastleConnect, verifyNetwork as kastleVerifyNetwork } from './kastle';
+import { isKaswareInstalled, connectWallet as kaswareConnect, verifyNetwork as kaswareVerifyNetwork } from './kasware';
 import { executeBridge, executeBridgeWithMining, isMiningAvailable, getExplorerUrl, getL2ExplorerUrl, BridgeResult } from './bridge';
 import { initKaspaWasm } from './kaspa-wasm';
 import { disconnectRpc } from './tx-miner';
+import type { WalletType, ConnectedWallet } from './wallet';
 
 // UI State
-let connectedAccount: KastleAccount | null = null;
+let connectedWallet: ConnectedWallet | null = null;
+let selectedWalletType: WalletType | null = null;
 
 // DOM Elements
 const elements = {
@@ -44,6 +47,10 @@ const elements = {
   networkMainnetBtn: () => document.getElementById('network-mainnet-btn') as HTMLButtonElement,
   infoBanner: () => document.getElementById('info-banner')!,
   pageSubtitle: () => document.getElementById('page-subtitle')!,
+
+  // Wallet selector
+  walletKastleBtn: () => document.getElementById('wallet-kastle-btn') as HTMLButtonElement,
+  walletKaswareBtn: () => document.getElementById('wallet-kasware-btn') as HTMLButtonElement,
 };
 
 /**
@@ -91,7 +98,7 @@ function getLabels() {
         This bridge wraps KAS from Kaspa Mainnet into iKAS on Igra Mainnet.
         KAS is sent to the Entry address.
         Minimum amount: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS. Maximum: ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS} KAS.${feeNote}
-        Ensure your Kastle wallet is set to mainnet.`,
+        Ensure your Kaspa wallet is set to mainnet.`,
     };
   }
   if (mode === 'test-mainnet') {
@@ -102,7 +109,7 @@ function getLabels() {
       bannerHtml: `<strong>Test Mainnet Bridge</strong><br>
         This bridge wraps KAS from Kaspa Mainnet into iKAS on Igra Galleon Test Mainnet.
         KAS is sent back to your own wallet with the Entry payload.
-        Minimum amount: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS. Ensure your Kastle wallet is set to mainnet.`,
+        Minimum amount: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS. Ensure your Kaspa wallet is set to mainnet.`,
     };
   }
   return {
@@ -111,7 +118,7 @@ function getLabels() {
     subtitle: 'Bridge TKAS from Kaspa Testnet to iKAS on Igra Galleon',
     bannerHtml: `<strong>Testnet Bridge</strong><br>
       This bridge transfers tKAS from Kaspa Testnet-10 to iKAS on Igra Galleon Testnet.
-      Minimum amount: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS. Ensure your Kastle wallet is set to testnet-10.`,
+      Minimum amount: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS. Ensure your Kaspa wallet is set to testnet-10.`,
   };
 }
 
@@ -145,7 +152,7 @@ async function handleNetworkSwitch(mode: NetworkMode): Promise<void> {
   setNetworkMode(mode);
 
   // Disconnect wallet — user must reconnect on the new network
-  connectedAccount = null;
+  connectedWallet = null;
   await disconnectRpc();
 
   updateNetworkUI();
@@ -177,11 +184,39 @@ async function handleNetworkSwitch(mode: NetworkMode): Promise<void> {
     amountInput.placeholder = `Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS`;
   }
 
-  if (!isKastleInstalled()) {
-    log('Kastle wallet not detected. Please install the extension.');
+  logWalletDetection();
+}
+
+/**
+ * Log which wallets are detected
+ */
+function logWalletDetection(): void {
+  const kastleOk = isKastleInstalled();
+  const kaswareOk = isKaswareInstalled();
+
+  if (kastleOk && kaswareOk) {
+    log('Kastle and Kasware wallets detected. Select a wallet and click "Connect".');
+  } else if (kastleOk) {
+    log('Kastle wallet detected. Kasware not found.');
+  } else if (kaswareOk) {
+    log('Kasware wallet detected. Kastle not found.');
   } else {
-    log('Kastle wallet detected. Click "Connect" to begin.');
+    log('No Kaspa wallet detected. Please install Kastle or Kasware.');
   }
+}
+
+/**
+ * Handle wallet type selection
+ */
+function selectWallet(type: WalletType): void {
+  selectedWalletType = type;
+
+  const kastleBtn = elements.walletKastleBtn();
+  const kaswareBtn = elements.walletKaswareBtn();
+  kastleBtn.classList.toggle('active', type === 'kastle');
+  kaswareBtn.classList.toggle('active', type === 'kasware');
+
+  updateUI();
 }
 
 /**
@@ -193,10 +228,15 @@ function updateUI(): void {
   const connectBtn = elements.connectBtn();
   const bridgeSection = elements.bridgeSection();
 
-  if (connectedAccount) {
-    walletStatus.textContent = 'Connected';
+  // Disable wallet selector buttons for wallets that aren't installed
+  elements.walletKastleBtn().disabled = !isKastleInstalled();
+  elements.walletKaswareBtn().disabled = !isKaswareInstalled();
+
+  if (connectedWallet) {
+    const walletName = connectedWallet.type === 'kastle' ? 'Kastle' : 'Kasware';
+    walletStatus.textContent = `Connected (${walletName})`;
     walletStatus.className = 'status-value connected';
-    walletAddress.textContent = connectedAccount.address;
+    walletAddress.textContent = connectedWallet.address;
     connectBtn.textContent = 'Connected';
     connectBtn.disabled = true;
     bridgeSection.style.display = 'block';
@@ -204,8 +244,16 @@ function updateUI(): void {
     walletStatus.textContent = 'Not connected';
     walletStatus.className = 'status-value';
     walletAddress.textContent = '-';
-    connectBtn.textContent = 'Connect Kastle Wallet';
-    connectBtn.disabled = false;
+
+    if (selectedWalletType) {
+      const walletName = selectedWalletType === 'kastle' ? 'Kastle' : 'Kasware';
+      connectBtn.textContent = `Connect ${walletName}`;
+      connectBtn.disabled = false;
+    } else {
+      connectBtn.textContent = 'Select a Wallet';
+      connectBtn.disabled = true;
+    }
+
     bridgeSection.style.display = 'none';
   }
 }
@@ -216,9 +264,20 @@ function updateUI(): void {
 async function handleConnect(): Promise<void> {
   clearError();
 
-  if (!isKastleInstalled()) {
-    showError('Kastle wallet not detected. Please install the Kastle extension from the Chrome Web Store.');
-    window.open('https://chromewebstore.google.com/detail/kastle/oambclflhjfppdmkghokjmpppmaebego', '_blank');
+  if (!selectedWalletType) {
+    showError('Please select a wallet first.');
+    return;
+  }
+
+  const walletName = selectedWalletType === 'kastle' ? 'Kastle' : 'Kasware';
+
+  const isInstalled = selectedWalletType === 'kastle' ? isKastleInstalled() : isKaswareInstalled();
+  if (!isInstalled) {
+    const installUrl = selectedWalletType === 'kastle'
+      ? 'https://chromewebstore.google.com/detail/kastle/oambclflhjfppdmkghokjmpppmaebego'
+      : 'https://chromewebstore.google.com/detail/kasware-wallet/hklhheigdglejcbllnodkdemomannpcg';
+    showError(`${walletName} wallet not detected. Please install the extension.`);
+    window.open(installUrl, '_blank');
     return;
   }
 
@@ -226,12 +285,21 @@ async function handleConnect(): Promise<void> {
     elements.connectBtn().disabled = true;
     elements.connectBtn().textContent = 'Connecting...';
 
-    const account = await connectWallet();
-    connectedAccount = account;
-    log(`Wallet connected: ${account.address}`);
+    let address: string;
+    if (selectedWalletType === 'kastle') {
+      const account = await kastleConnect();
+      address = account.address;
+    } else {
+      address = await kaswareConnect();
+    }
+
+    connectedWallet = { address, type: selectedWalletType };
+    log(`${walletName} wallet connected: ${address}`);
 
     // Verify network
-    const correctNetwork = await verifyNetwork();
+    const correctNetwork = selectedWalletType === 'kastle'
+      ? await kastleVerifyNetwork()
+      : await kaswareVerifyNetwork();
     const networkStatus = elements.networkStatus();
 
     if (correctNetwork) {
@@ -241,7 +309,7 @@ async function handleConnect(): Promise<void> {
     } else {
       networkStatus.textContent = `Wrong network!`;
       networkStatus.className = 'status-value error';
-      showError(`Please switch Kastle wallet to ${CONFIG.L1.NETWORK_ID}`);
+      showError(`Please switch ${walletName} wallet to ${CONFIG.L1.NETWORK_ID}`);
       log(`WARNING: Wrong network. Please switch to ${CONFIG.L1.NETWORK_ID}`);
     }
 
@@ -251,7 +319,7 @@ async function handleConnect(): Promise<void> {
     showError(msg);
     log(`Connection error: ${msg}`);
     elements.connectBtn().disabled = false;
-    elements.connectBtn().textContent = 'Connect Kastle Wallet';
+    elements.connectBtn().textContent = `Connect ${walletName}`;
   }
 }
 
@@ -261,7 +329,7 @@ async function handleConnect(): Promise<void> {
 async function handleBridge(): Promise<void> {
   clearError();
 
-  if (!connectedAccount) {
+  if (!connectedWallet) {
     showError('Please connect your wallet first');
     return;
   }
@@ -303,7 +371,8 @@ async function handleBridge(): Promise<void> {
 
       result = await executeBridgeWithMining(
         { amountKas: amount, l2Address },
-        connectedAccount.address,
+        connectedWallet.address,
+        connectedWallet.type,
         (msg) => log(msg)
       );
     } else {
@@ -314,7 +383,8 @@ async function handleBridge(): Promise<void> {
 
       result = await executeBridge(
         { amountKas: amount, l2Address },
-        connectedAccount.address,
+        connectedWallet.address,
+        connectedWallet.type,
         (msg) => log(msg)
       );
     }
@@ -401,16 +471,16 @@ async function init(): Promise<void> {
   // Initialize WASM
   await initWasm();
 
-  // Check if Kastle is installed
-  if (!isKastleInstalled()) {
-    log('Kastle wallet not detected. Please install the extension.');
-  } else {
-    log('Kastle wallet detected. Click "Connect" to begin.');
-  }
+  // Detect available wallets
+  logWalletDetection();
 
   // Set up event listeners
   elements.connectBtn().addEventListener('click', handleConnect);
   elements.bridgeBtn().addEventListener('click', handleBridge);
+
+  // Wallet selector listeners
+  elements.walletKastleBtn().addEventListener('click', () => selectWallet('kastle'));
+  elements.walletKaswareBtn().addEventListener('click', () => selectWallet('kasware'));
 
   // Network selector listeners
   elements.networkTestnetBtn().addEventListener('click', () => handleNetworkSwitch('testnet'));

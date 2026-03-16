@@ -296,7 +296,7 @@
       width: auto;
     }
 
-    .network-selector button:hover:not(.active) {
+    .network-selector button:hover:not(.active):not(:disabled) {
       color: var(--text-primary);
       background: var(--bg-tertiary);
     }
@@ -305,6 +305,47 @@
       background: var(--accent-primary);
       color: white;
       box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    }
+
+    /* Wallet Selector */
+    .wallet-selector {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.25rem;
+    }
+
+    .wallet-selector button {
+      flex: 1;
+      padding: 0.625rem 1rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background: transparent;
+      color: var(--text-secondary);
+      transition: all 0.2s ease;
+      width: auto;
+    }
+
+    .wallet-selector button:hover:not(.active):not(:disabled) {
+      color: var(--text-primary);
+      background: var(--bg-secondary);
+    }
+
+    .wallet-selector button.active {
+      background: var(--accent-primary);
+      color: white;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    }
+
+    .wallet-selector button:disabled:not(.active) {
+      opacity: 0.35;
+      cursor: not-allowed;
     }
 
     footer {
@@ -429,7 +470,7 @@
       <strong>Igra Mainnet Bridge</strong><br>
       This bridge wraps KAS from Kaspa Mainnet into iKAS on Igra Mainnet.
       KAS is sent to the Entry address.
-      Minimum amount: 10 KAS. Maximum amount: 300 KAS. Ensure your Kastle wallet is set to mainnet.
+      Minimum amount: 10 KAS. Maximum amount: 300 KAS. Ensure your Kaspa wallet is set to mainnet.
     </div>
 
     <div id="error-message" class="error-message"></div>
@@ -449,8 +490,12 @@
         <span class="status-label">Network</span>
         <span id="network-status" class="status-value">-</span>
       </div>
-      <button id="connect-btn" class="btn-primary" style="margin-top: 1rem;">
-        Connect Kastle Wallet
+      <div class="wallet-selector" style="margin-top: 1rem;">
+        <button id="wallet-kastle-btn">Kastle</button>
+        <button id="wallet-kasware-btn">Kasware</button>
+      </div>
+      <button id="connect-btn" class="btn-primary" disabled>
+        Select a Wallet
       </button>
     </div>
 
@@ -523,7 +568,9 @@
         &nbsp;·&nbsp;
         <a href="https://github.com/argonmining/igra-kas-bridge" target="_blank">GitHub</a>
         &nbsp;·&nbsp;
-        <a href="https://chromewebstore.google.com/detail/kastle/oambclflhjfppdmkghokjmpppmaebego" target="_blank">Get Kastle Wallet</a>
+        <a href="https://chromewebstore.google.com/detail/kastle/oambclflhjfppdmkghokjmpppmaebego" target="_blank">Kastle Wallet</a>
+        &nbsp;·&nbsp;
+        <a href="https://chromewebstore.google.com/detail/kasware-wallet/hklhheigdglejcbllnodkdemomannpcg" target="_blank">Kasware Wallet</a>
       </p>
       <p style="margin-top: 0.5rem;"></p>
     </footer>

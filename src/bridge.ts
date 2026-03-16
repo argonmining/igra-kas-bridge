@@ -10,9 +10,11 @@
  */
 
 import { CONFIG, kasToSompi, isValidL2Address, getEntryAddress } from './config';
-import { sendKaspaWithPayload, signAndBroadcastTransaction } from './kastle';
+import { sendKaspaWithPayload as kastleSendKaspa, signAndBroadcastTransaction as kastleSignAndBroadcast } from './kastle';
+import { sendKaspaWithPayload as kaswareSendKaspa, signAndBroadcastTransaction as kaswareSignAndBroadcast } from './kasware';
 import { isWasmInitialized } from './kaspa-wasm';
-import { mineTxId, serializeForKastle, initRpcConnection } from './tx-miner';
+import { mineTxId, serializeTransaction, initRpcConnection } from './tx-miner';
+import type { WalletType } from './wallet';
 
 export interface BridgeParams {
   /** Amount in KAS to bridge */
@@ -76,7 +78,7 @@ export function constructEntryPayload(l2Address: string, amountSompi: bigint, no
 }
 
 /**
- * Converts the payload to hex string for Kastle wallet
+ * Converts the payload to hex string for wallet submission
  */
 export function payloadToHex(payload: Uint8Array): string {
   return Array.from(payload)
@@ -154,11 +156,13 @@ export function validateBridgeParams(params: BridgeParams): void {
  *
  * @param params Bridge parameters
  * @param senderAddress Kaspa address of the sender (needed for self-send mode)
+ * @param walletType Which wallet to sign/broadcast with
  * @param onProgress Optional callback for progress updates
  */
 export async function executeBridge(
   params: BridgeParams,
   senderAddress: string,
+  walletType: WalletType,
   onProgress?: (message: string) => void
 ): Promise<BridgeResult> {
   validateBridgeParams(params);
@@ -189,11 +193,12 @@ export async function executeBridge(
   onProgress?.(`  - Amount: ${decoded.amountKas} KAS (${decoded.amountSompi} SOMPI)`);
   onProgress?.(`  - Nonce: 0x${decoded.nonce.toString(16).padStart(8, '0')}`);
 
-  onProgress?.(`Sending transaction via Kastle wallet...`);
+  const walletName = walletType === 'kastle' ? 'Kastle' : 'Kasware';
+  onProgress?.(`Sending transaction via ${walletName} wallet...`);
   onProgress?.(`Required TX ID prefix: ${CONFIG.L1.TX_ID_PREFIX}`);
 
-  // Send transaction via Kastle
-  const txId = await sendKaspaWithPayload(
+  const sendFn = walletType === 'kastle' ? kastleSendKaspa : kaswareSendKaspa;
+  const txId = await sendFn(
     entryAddress,
     amountSompi,
     payloadHex
@@ -292,15 +297,17 @@ export function generateRandomNonce(): number {
  * 1. Fetch UTXOs for the sender
  * 2. Build a transaction with the Entry payload
  * 3. Mine the nonce until TX ID matches required prefix
- * 4. Sign and broadcast via Kastle wallet
+ * 4. Sign and broadcast via the connected wallet
  *
  * @param params Bridge parameters
  * @param senderAddress Kaspa address of the sender
+ * @param walletType Which wallet to sign/broadcast with
  * @param onProgress Optional callback for progress updates
  */
 export async function executeBridgeWithMining(
   params: BridgeParams,
   senderAddress: string,
+  walletType: WalletType,
   onProgress?: (message: string) => void
 ): Promise<BridgeResult> {
   validateBridgeParams(params);
@@ -341,12 +348,17 @@ export async function executeBridgeWithMining(
   onProgress?.(`TX ID: ${miningResult.txId}`);
   onProgress?.(`Nonce: 0x${miningResult.nonce.toString(16).padStart(8, '0')}`);
 
-  // Serialize transaction for Kastle signing
-  const txJson = serializeForKastle(miningResult.tx);
-  onProgress?.(`Transaction built, requesting signature from Kastle...`);
+  const walletName = walletType === 'kastle' ? 'Kastle' : 'Kasware';
+  const txJson = serializeTransaction(miningResult.tx);
+  onProgress?.(`Transaction built, requesting signature from ${walletName}...`);
 
-  // Sign and broadcast via Kastle
-  const txId = await signAndBroadcastTransaction(txJson);
+  let txId: string;
+  if (walletType === 'kastle') {
+    txId = await kastleSignAndBroadcast(txJson);
+  } else {
+    const inputCount = miningResult.tx.inputs?.length ?? 1;
+    txId = await kaswareSignAndBroadcast(txJson, inputCount);
+  }
 
   onProgress?.(`Transaction submitted: ${txId}`);
 
