@@ -21,6 +21,7 @@ export interface ScriptOption {
 export interface KastleWallet {
   connect(): Promise<boolean>;
   disconnect(): Promise<void>;
+  switchNetwork(network: 'mainnet' | 'testnet-10'): Promise<void>;
   getAccount(): Promise<KastleAccount>;
   signMessage(message: string): Promise<string>;
   sendKaspa(
@@ -91,13 +92,18 @@ export function verifyNetworkByAddress(address: string): boolean {
 }
 
 /**
- * Attempt to nudge Kastle to the expected network via kas:get_network check.
- * Kastle's RPC returns the exact network ID ('mainnet' | 'testnet-10'),
- * so we can reliably detect mismatches — but the primary gate is address prefix.
+ * Best-effort nudge to switch Kastle to the expected network.
+ * Primary gate remains address-prefix verification in handleConnect.
  */
 export async function ensureNetwork(): Promise<void> {
-  // Kastle doesn't expose switchNetwork; nothing to force here.
-  // Verification is handled by verifyNetworkByAddress in handleConnect.
+  try {
+    const kastle = getKastle();
+    const target = CONFIG.L1.NETWORK_ID;
+    const kastleNetwork = target === 'mainnet' ? 'mainnet' : 'testnet-10';
+    await kastle.switchNetwork(kastleNetwork);
+  } catch {
+    // Swallow — verification happens via address prefix
+  }
 }
 
 /**
