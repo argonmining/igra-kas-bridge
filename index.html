@@ -314,6 +314,17 @@
       color: var(--text-secondary);
       transition: all 0.2s ease;
       width: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+    }
+
+    .network-selector button img {
+      height: 14px;
+      width: 14px;
+      object-fit: contain;
+      flex-shrink: 0;
     }
 
     .network-selector button:hover:not(.active):not(:disabled) {
@@ -351,6 +362,18 @@
       color: var(--text-secondary);
       transition: all 0.2s ease;
       width: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+    }
+
+    .wallet-selector button img {
+      height: 18px;
+      width: 18px;
+      object-fit: contain;
+      flex-shrink: 0;
+      border-radius: 4px;
     }
 
     .wallet-selector button:hover:not(.active):not(:disabled) {
@@ -503,9 +526,9 @@
 
     <!-- Network Selector -->
     <div class="network-selector">
-      <button id="network-testnet-btn">Galleon Testnet</button>
+      <button id="network-testnet-btn"><img src="/igra-logomark-white.svg" alt="">Galleon Testnet</button>
       <!-- <button id="network-test-mainnet-btn">Galleon Test Mainnet</button> -->
-      <button id="network-mainnet-btn" class="active">Igra Mainnet</button>
+      <button id="network-mainnet-btn" class="active"><img src="/igra-logomark.svg" alt="">Igra Mainnet</button>
     </div>
 
     <div id="info-banner" class="info-banner">
@@ -533,8 +556,8 @@
         <span id="network-status" class="status-value">-</span>
       </div>
       <div class="wallet-selector" style="margin-top: 0.625rem;">
-        <button id="wallet-kastle-btn">Kastle</button>
-        <button id="wallet-kasware-btn">Kasware</button>
+        <button id="wallet-kastle-btn"><img src="/Kastle_SymbolicLogo.svg" alt="">Kastle</button>
+        <button id="wallet-kasware-btn"><img src="/kasware-logo.png" alt="">Kasware</button>
       </div>
       <button id="connect-btn" class="btn-primary" disabled>
         Select a Wallet
