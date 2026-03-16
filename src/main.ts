@@ -109,7 +109,7 @@ function getLabels() {
     kasSymbol: 'TKAS',
     bridgeAction: 'Bridge TKAS → iKAS',
     subtitle: 'Kaspa Testnet-10 → Igra Galleon',
-    bannerHtml: `<strong>Galleon Testnet</strong> — Bridges tKAS into iKAS on Igra Galleon. Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS.`,
+    bannerHtml: `<strong>Galleon Testnet</strong> — Bridges tKAS into iKAS on Igra Galleon Testnet. Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS.`,
   };
 }
 
