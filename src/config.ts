@@ -72,8 +72,8 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       NETWORK_ID: 'mainnet',
       ENTRY_ADDRESS: 'kaspa:ppvnxxzm0rr37zpnwux2f2ntvfpr4uqdpm7zsvsztg3en92r7gs0wkmr72q9n',
       TX_ID_PREFIX: '97b1',
-      MIN_BRIDGE_AMOUNT_KAS: 10,
-      MAX_BRIDGE_AMOUNT_KAS: 300,
+      MIN_BRIDGE_AMOUNT_KAS: parseInt(import.meta.env.VITE_MAINNET_MIN_KAS, 10) || 10,
+      MAX_BRIDGE_AMOUNT_KAS: parseInt(import.meta.env.VITE_MAINNET_MAX_KAS, 10) || 300,
       SOMPI_PER_KAS: 100_000_000n,
       EXPLORER_BASE: 'https://explorer.kaspa.org',
     },
@@ -169,4 +169,31 @@ export function getEntryAddress(senderAddress?: string): string {
   if (entry !== null) return entry;
   if (!senderAddress) throw new Error('Sender address required for self-send mode');
   return senderAddress;
+}
+
+/**
+ * Mainnet bridge fee configuration (from env variables).
+ * Set VITE_MAINNET_FEE_KAS (whole KAS) and VITE_MAINNET_FEE_ADDRESS in Railway.
+ * If either is missing, no fee is applied.
+ */
+export interface BridgeFee {
+  amountSompi: bigint;
+  address: string;
+}
+
+export function getMainnetFee(): BridgeFee | null {
+  if (currentMode !== 'mainnet') return null;
+
+  const feeKas = import.meta.env.VITE_MAINNET_FEE_KAS;
+  const feeAddress = import.meta.env.VITE_MAINNET_FEE_ADDRESS;
+
+  if (!feeKas || !feeAddress) return null;
+
+  const kas = parseInt(feeKas, 10);
+  if (isNaN(kas) || kas <= 0) return null;
+
+  return {
+    amountSompi: BigInt(kas) * 100_000_000n,
+    address: feeAddress.trim(),
+  };
 }

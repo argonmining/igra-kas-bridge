@@ -5,7 +5,7 @@
  * Supports Galleon Testnet (testnet-10) and Galleon Test Mainnet (mainnet).
  */
 
-import { CONFIG, sompiToKas, isValidL2Address, getNetworkMode, setNetworkMode, type NetworkMode } from './config';
+import { CONFIG, sompiToKas, isValidL2Address, getNetworkMode, setNetworkMode, getMainnetFee, type NetworkMode } from './config';
 import { isKastleInstalled, connectWallet, verifyNetwork, KastleAccount } from './kastle';
 import { executeBridge, executeBridgeWithMining, isMiningAvailable, getExplorerUrl, getL2ExplorerUrl, BridgeResult } from './bridge';
 import { initKaspaWasm } from './kaspa-wasm';
@@ -81,6 +81,8 @@ function clearError(): void {
 function getLabels() {
   const mode = getNetworkMode();
   if (mode === 'mainnet') {
+    const fee = getMainnetFee();
+    const feeNote = fee ? ` Bridge fee: ${sompiToKas(fee.amountSompi)} KAS per transaction.` : '';
     return {
       kasSymbol: 'KAS',
       bridgeAction: 'Bridge KAS → iKAS',
@@ -88,7 +90,8 @@ function getLabels() {
       bannerHtml: `<strong>Igra Mainnet Bridge</strong><br>
         This bridge wraps KAS from Kaspa Mainnet into iKAS on Igra Mainnet.
         KAS is sent to the Entry address.
-        Minimum amount: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS. Ensure your Kastle wallet is set to mainnet.`,
+        Minimum amount: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS. Maximum: ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS} KAS.${feeNote}
+        Ensure your Kastle wallet is set to mainnet.`,
     };
   }
   if (mode === 'test-mainnet') {
