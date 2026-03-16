@@ -397,7 +397,7 @@
   </style>
 </head>
 <body>
-  <!-- Password Gate -->
+  <!-- Password Gate (disabled)
   <div id="auth-gate">
     <div class="auth-box">
       <h1>Igra Bridge</h1>
@@ -409,8 +409,9 @@
       <div id="auth-error" class="auth-error"></div>
     </div>
   </div>
+  -->
 
-  <div id="app-root">
+  <div id="app-root" class="visible">
   <div class="container">
     <header>
       <h1>Igra Bridge</h1>
@@ -529,6 +530,7 @@
   </div>
   </div>
 
+  <!-- Password gate script (disabled)
   <script>
     (function() {
       var HASH = '14296e27297b41ed35b5c7371cdd8d9c5e909bcd196ada70ca858b7c7e4eda08';
@@ -570,6 +572,7 @@
       }
     })();
   </script>
+  -->
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
