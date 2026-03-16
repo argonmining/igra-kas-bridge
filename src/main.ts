@@ -93,32 +93,23 @@ function getLabels() {
     return {
       kasSymbol: 'KAS',
       bridgeAction: 'Bridge KAS → iKAS',
-      subtitle: 'Bridge KAS from Kaspa Mainnet to iKAS on Igra Mainnet',
-      bannerHtml: `<strong>Igra Mainnet Bridge</strong><br>
-        This bridge wraps KAS from Kaspa Mainnet into iKAS on Igra Mainnet.
-        KAS is sent to the Entry address.
-        Minimum amount: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS. Maximum: ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS} KAS.${feeNote}
-        Ensure your Kaspa wallet is set to mainnet.`,
+      subtitle: 'Kaspa Mainnet → Igra Mainnet',
+      bannerHtml: `<strong>Igra Mainnet</strong> — Wraps KAS into iKAS on Igra Mainnet. Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS · Max: ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS} KAS.${feeNote}`,
     };
   }
   if (mode === 'test-mainnet') {
     return {
       kasSymbol: 'KAS',
       bridgeAction: 'Bridge KAS → iKAS',
-      subtitle: 'Bridge KAS from Kaspa Mainnet to iKAS on Igra Galleon Test Mainnet',
-      bannerHtml: `<strong>Test Mainnet Bridge</strong><br>
-        This bridge wraps KAS from Kaspa Mainnet into iKAS on Igra Galleon Test Mainnet.
-        KAS is sent back to your own wallet with the Entry payload.
-        Minimum amount: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS. Ensure your Kaspa wallet is set to mainnet.`,
+      subtitle: 'Kaspa Mainnet → Igra Galleon Test Mainnet',
+      bannerHtml: `<strong>Test Mainnet</strong> — Wraps KAS into iKAS on Galleon Test Mainnet via self-send. Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS.`,
     };
   }
   return {
     kasSymbol: 'TKAS',
     bridgeAction: 'Bridge TKAS → iKAS',
-    subtitle: 'Bridge TKAS from Kaspa Testnet to iKAS on Igra Galleon',
-    bannerHtml: `<strong>Testnet Bridge</strong><br>
-      This bridge transfers tKAS from Kaspa Testnet-10 to iKAS on Igra Galleon Testnet.
-      Minimum amount: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS. Ensure your Kaspa wallet is set to testnet-10.`,
+    subtitle: 'Kaspa Testnet-10 → Igra Galleon',
+    bannerHtml: `<strong>Galleon Testnet</strong> — Bridges tKAS into iKAS on Igra Galleon. Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS.`,
   };
 }
 
@@ -236,10 +227,9 @@ function updateUI(): void {
   const walletAddress = elements.walletAddress();
   const connectBtn = elements.connectBtn();
   const bridgeSection = elements.bridgeSection();
-
-  // Disable wallet selector buttons for wallets that aren't installed
-  elements.walletKastleBtn().disabled = !isKastleInstalled();
-  elements.walletKaswareBtn().disabled = !isKaswareInstalled();
+  const kastleBtn = elements.walletKastleBtn();
+  const kaswareBtn = elements.walletKaswareBtn();
+  const walletSelector = kastleBtn.parentElement!;
 
   if (connectedWallet) {
     const walletName = connectedWallet.type === 'kastle' ? 'Kastle' : 'Kasware';
@@ -249,10 +239,18 @@ function updateUI(): void {
     connectBtn.textContent = 'Disconnect';
     connectBtn.disabled = false;
     bridgeSection.style.display = 'block';
+
+    kastleBtn.disabled = true;
+    kaswareBtn.disabled = true;
+    walletSelector.setAttribute('data-tooltip', 'Disconnect your wallet before switching');
   } else {
     walletStatus.textContent = 'Not connected';
     walletStatus.className = 'status-value';
     walletAddress.textContent = '-';
+
+    kastleBtn.disabled = !isKastleInstalled();
+    kaswareBtn.disabled = !isKaswareInstalled();
+    walletSelector.removeAttribute('data-tooltip');
 
     if (selectedWalletType) {
       const walletName = selectedWalletType === 'kastle' ? 'Kastle' : 'Kasware';
