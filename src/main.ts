@@ -135,6 +135,38 @@ function updateNetworkUI(): void {
 }
 
 /**
+ * Sync the amount input's min/max attributes, placeholder, and hint text
+ * with the current network config. Clamps any existing value into range.
+ */
+function updateAmountConstraints(): void {
+  const input = elements.amountInput();
+  const min = CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS;
+  const max = CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS;
+  const hint = input.nextElementSibling as HTMLElement | null;
+
+  input.min = min.toString();
+
+  if (max !== null) {
+    input.max = max.toString();
+    const maxDisplay = max.toLocaleString();
+    input.placeholder = `${min} – ${maxDisplay} KAS`;
+    if (hint) hint.textContent = `Amount of KAS to bridge to Igra (${min} – ${maxDisplay} KAS)`;
+  } else {
+    input.removeAttribute('max');
+    input.placeholder = `Min: ${min} KAS`;
+    if (hint) hint.textContent = `Amount of KAS to bridge to Igra (min ${min} KAS)`;
+  }
+
+  if (input.value !== '') {
+    const val = parseFloat(input.value);
+    if (!isNaN(val)) {
+      if (max !== null && val > max) input.value = max.toString();
+      else if (val < min) input.value = min.toString();
+    }
+  }
+}
+
+/**
  * Handle network mode switch
  */
 async function handleNetworkSwitch(mode: NetworkMode): Promise<void> {
@@ -174,15 +206,7 @@ async function handleNetworkSwitch(mode: NetworkMode): Promise<void> {
   log(`Required TX Prefix: ${CONFIG.L1.TX_ID_PREFIX}`);
 
   // Update amount constraints for the new network
-  const amountInput = elements.amountInput();
-  amountInput.min = CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS.toString();
-  if (CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS !== null) {
-    amountInput.max = CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS.toString();
-    amountInput.placeholder = `${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} – ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS} KAS`;
-  } else {
-    amountInput.removeAttribute('max');
-    amountInput.placeholder = `Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS`;
-  }
+  updateAmountConstraints();
 
   logWalletDetection();
 }
@@ -532,6 +556,27 @@ async function init(): Promise<void> {
   });
   elements.bridgeBtn().addEventListener('click', handleBridge);
 
+  // Enforce min/max on the amount input
+  const amountEl = elements.amountInput();
+  amountEl.addEventListener('input', () => {
+    if (amountEl.value === '') return;
+    const val = parseFloat(amountEl.value);
+    if (isNaN(val)) return;
+    const max = CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS;
+    if (max !== null && val > max) {
+      amountEl.value = max.toString();
+    }
+  });
+  amountEl.addEventListener('blur', () => {
+    if (amountEl.value === '') return;
+    const val = parseFloat(amountEl.value);
+    if (isNaN(val)) return;
+    const min = CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS;
+    if (val < min) {
+      amountEl.value = min.toString();
+    }
+  });
+
   // Wallet selector listeners
   elements.walletKastleBtn().addEventListener('click', () => selectWallet('kastle'));
   elements.walletKaswareBtn().addEventListener('click', () => selectWallet('kasware'));
@@ -542,13 +587,7 @@ async function init(): Promise<void> {
   elements.networkMainnetBtn().addEventListener('click', () => handleNetworkSwitch('mainnet'));
 
   // Set amount constraints
-  elements.amountInput().min = CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS.toString();
-  if (CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS !== null) {
-    elements.amountInput().max = CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS.toString();
-    elements.amountInput().placeholder = `${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} – ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS} KAS`;
-  } else {
-    elements.amountInput().placeholder = `Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS`;
-  }
+  updateAmountConstraints();
 
   // Initial UI state
   updateNetworkUI();

@@ -73,7 +73,7 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       ENTRY_ADDRESS: 'kaspa:ppvnxxzm0rr37zpnwux2f2ntvfpr4uqdpm7zsvsztg3en92r7gs0wkmr72q9n',
       TX_ID_PREFIX: '97b1',
       MIN_BRIDGE_AMOUNT_KAS: parseInt(import.meta.env.VITE_MAINNET_MIN_KAS, 10) || 10,
-      MAX_BRIDGE_AMOUNT_KAS: parseInt(import.meta.env.VITE_MAINNET_MAX_KAS, 10) || 300,
+      MAX_BRIDGE_AMOUNT_KAS: parseInt(import.meta.env.VITE_MAINNET_MAX_KAS, 10) || 5000,
       SOMPI_PER_KAS: 100_000_000n,
       EXPLORER_BASE: 'https://explorer.kaspa.org',
     },
