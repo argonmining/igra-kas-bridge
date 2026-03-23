@@ -8,7 +8,7 @@
 import { CONFIG, sompiToKas, isValidL2Address, getNetworkMode, setNetworkMode, getMainnetFee, type NetworkMode } from './config';
 import { isKastleInstalled, connectWallet as kastleConnect, verifyNetworkByAddress, ensureNetwork as kastleEnsureNetwork, disconnectWallet as kastleDisconnect } from './kastle';
 import { isKaswareInstalled, connectWallet as kaswareConnect, ensureNetwork as kaswareEnsureNetwork, disconnectWallet as kaswareDisconnect } from './kasware';
-import { executeBridge, executeBridgeWithMining, isMiningAvailable, getExplorerUrl, getL2ExplorerUrl, BridgeResult } from './bridge';
+import { executeBridgeWithMining, isMiningAvailable, getExplorerUrl, getL2ExplorerUrl, type BridgeResult } from './bridge';
 import { initKaspaWasm } from './kaspa-wasm';
 import { disconnectRpc } from './tx-miner';
 import type { WalletType, ConnectedWallet } from './wallet';
@@ -59,7 +59,9 @@ const elements = {
 function log(message: string): void {
   const logOutput = elements.logOutput();
   const timestamp = new Date().toLocaleTimeString();
-  logOutput.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+  const entry = document.createElement('div');
+  entry.textContent = `[${timestamp}] ${message}`;
+  logOutput.appendChild(entry);
   logOutput.scrollTop = logOutput.scrollHeight;
 }
 
@@ -263,6 +265,7 @@ function updateUI(): void {
     connectBtn.textContent = 'Disconnect';
     connectBtn.disabled = false;
     bridgeSection.style.display = 'block';
+    elements.bridgeBtn().disabled = !isMiningAvailable();
 
     kastleBtn.disabled = true;
     kaswareBtn.disabled = true;
@@ -409,6 +412,11 @@ async function handleBridge(): Promise<void> {
     return;
   }
 
+  if (!isMiningAvailable()) {
+    showError('Bridge unavailable — Kaspa WASM failed to initialize. Please reload the page.');
+    return;
+  }
+
   const amountStr = elements.amountInput().value;
   const l2Address = elements.l2AddressInput().value.trim();
 
@@ -436,33 +444,16 @@ async function handleBridge(): Promise<void> {
     elements.logOutput().innerHTML = '';
     elements.resultSection().style.display = 'none';
 
-    let result: BridgeResult;
+    elements.bridgeBtn().textContent = 'Mining TX ID...';
+    log('Starting bridge with TX ID mining...');
+    log('This ensures the transaction will be recognized by Igra.');
 
-    if (isMiningAvailable()) {
-      // Use TX ID mining for guaranteed prefix match
-      elements.bridgeBtn().textContent = 'Mining TX ID...';
-      log('Starting bridge with TX ID mining...');
-      log('This ensures the transaction will be recognized by Igra.');
-
-      result = await executeBridgeWithMining(
-        { amountKas: amount, l2Address },
-        connectedWallet.address,
-        connectedWallet.type,
-        (msg) => log(msg)
-      );
-    } else {
-      // Fallback to simple send (may not match prefix)
-      elements.bridgeBtn().textContent = 'Processing...';
-      log('Starting bridge transaction (no mining - WASM not available)...');
-      log('TX ID prefix may not match - transaction might not be processed by Igra.');
-
-      result = await executeBridge(
-        { amountKas: amount, l2Address },
-        connectedWallet.address,
-        connectedWallet.type,
-        (msg) => log(msg)
-      );
-    }
+    const result = await executeBridgeWithMining(
+      { amountKas: amount, l2Address },
+      connectedWallet.address,
+      connectedWallet.type,
+      (msg) => log(msg)
+    );
 
     showResult(result);
   } catch (error) {
@@ -521,7 +512,7 @@ async function initWasm(): Promise<boolean> {
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     log(`WASM init failed: ${msg}`);
-    log('TX ID mining disabled - transactions may not be recognized by Igra.');
+    log('Bridge disabled — WASM is required for safe TX ID mining. Reload the page to retry.');
     return false;
   }
 }
