@@ -17,6 +17,30 @@ import type { WalletType, ConnectedWallet } from './wallet';
 let connectedWallet: ConnectedWallet | null = null;
 let selectedWalletType: WalletType | null = null;
 
+// Terms acceptance — required for every bridge transaction
+let termsAcceptedForTx = false;
+
+function hasAcceptedTerms(): boolean {
+  return termsAcceptedForTx;
+}
+
+function setTermsAccepted(): void {
+  termsAcceptedForTx = true;
+}
+
+function showTermsModal(): void {
+  const modal = document.getElementById('terms-modal')!;
+  const checkbox = document.getElementById('terms-checkbox') as HTMLInputElement;
+  const proceedBtn = document.getElementById('terms-proceed-btn') as HTMLButtonElement;
+  checkbox.checked = false;
+  proceedBtn.disabled = true;
+  modal.classList.remove('hidden');
+}
+
+function hideTermsModal(): void {
+  document.getElementById('terms-modal')!.classList.add('hidden');
+}
+
 // DOM Elements
 const elements = {
   walletSection: () => document.getElementById('wallet-section')!,
@@ -437,6 +461,11 @@ async function handleBridge(): Promise<void> {
     return;
   }
 
+  if (!hasAcceptedTerms()) {
+    showTermsModal();
+    return;
+  }
+
   const labels = getLabels();
 
   try {
@@ -461,6 +490,7 @@ async function handleBridge(): Promise<void> {
     showError(msg);
     log(`ERROR: ${msg}`);
   } finally {
+    termsAcceptedForTx = false;
     elements.bridgeBtn().disabled = false;
     elements.bridgeBtn().textContent = labels.bridgeAction;
   }
@@ -571,6 +601,23 @@ async function init(): Promise<void> {
   // Wallet selector listeners
   elements.walletKastleBtn().addEventListener('click', () => selectWallet('kastle'));
   elements.walletKaswareBtn().addEventListener('click', () => selectWallet('kasware'));
+
+  // Terms modal listeners
+  const termsCheckbox = document.getElementById('terms-checkbox') as HTMLInputElement;
+  const termsProceedBtn = document.getElementById('terms-proceed-btn') as HTMLButtonElement;
+  const termsCancelBtn = document.getElementById('terms-cancel-btn') as HTMLButtonElement;
+
+  termsCheckbox.addEventListener('change', () => {
+    termsProceedBtn.disabled = !termsCheckbox.checked;
+  });
+
+  termsProceedBtn.addEventListener('click', () => {
+    setTermsAccepted();
+    hideTermsModal();
+    handleBridge();
+  });
+
+  termsCancelBtn.addEventListener('click', hideTermsModal);
 
   // Network selector listeners
   elements.networkTestnetBtn().addEventListener('click', () => handleNetworkSwitch('testnet'));

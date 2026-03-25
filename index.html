@@ -490,6 +490,111 @@
     #app-root { display: none; }
     #app-root.visible { display: block; }
 
+    /* Terms Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-overlay.hidden { display: none; }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      max-width: 440px;
+      width: 90%;
+    }
+
+    .modal h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+
+    .modal p {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+
+    .modal a {
+      color: var(--accent-secondary);
+      text-decoration: none;
+    }
+
+    .modal a:hover { text-decoration: underline; }
+
+    .terms-checkbox {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.625rem;
+      margin-bottom: 1.25rem;
+      cursor: pointer;
+    }
+
+    .terms-checkbox input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      min-width: 18px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--bg-tertiary);
+      cursor: pointer;
+      margin-top: 1px;
+      position: relative;
+    }
+
+    .terms-checkbox input[type="checkbox"]:checked {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+    }
+
+    .terms-checkbox input[type="checkbox"]:checked::after {
+      content: '✓';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .terms-checkbox span {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .modal-actions button { flex: 1; }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--border);
+      color: var(--text-primary);
+    }
+
     @media (max-width: 480px) {
       .container {
         padding: 1rem;
@@ -644,8 +749,26 @@
         &nbsp;·&nbsp;
         <a href="https://chromewebstore.google.com/detail/kasware-wallet/hklhheigdglejcbllnodkdemomannpcg" target="_blank">Kasware Wallet</a>
       </p>
-      <p style="margin-top: 0.5rem;"></p>
+      <p style="margin-top: 0.5rem;">
+        <a href="/terms.html" target="_blank">Terms of Use</a>
+      </p>
     </footer>
+
+    <!-- Terms of Use Modal -->
+    <div id="terms-modal" class="modal-overlay hidden">
+      <div class="modal">
+        <h3>Terms of Use</h3>
+        <p>By proceeding with this bridge transaction, you acknowledge that you have read and agree to the <a href="/terms.html" target="_blank">iKAS Bridge Terms of Use</a>, including the associated risks, liability limitations, and eligibility requirements.</p>
+        <label class="terms-checkbox">
+          <input type="checkbox" id="terms-checkbox" />
+          <span>I have read and agree to the Terms of Use</span>
+        </label>
+        <div class="modal-actions">
+          <button id="terms-cancel-btn" class="btn-secondary">Cancel</button>
+          <button id="terms-proceed-btn" class="btn-primary" disabled>Proceed</button>
+        </div>
+      </div>
+    </div>
   </div>
   </div>
 
