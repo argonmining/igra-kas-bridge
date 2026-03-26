@@ -120,7 +120,7 @@ function getLabels() {
       kasSymbol: 'KAS',
       bridgeAction: 'Bridge KAS → iKAS',
       subtitle: 'Kaspa Mainnet → Igra Mainnet',
-      bannerHtml: `<strong>Igra Mainnet</strong> — Wraps KAS into iKAS on Igra Mainnet. Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS · Max: ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS} KAS.${feeNote}`,
+      bannerHtml: `<strong>Igra Mainnet</strong> — Wraps KAS into iKAS on Igra Mainnet. Min: ${CONFIG.L1.MIN_BRIDGE_AMOUNT_KAS} KAS.${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS !== null ? ` Max: ${CONFIG.L1.MAX_BRIDGE_AMOUNT_KAS.toLocaleString()} KAS.` : ''}${feeNote}`,
     };
   }
   if (mode === 'test-mainnet') {
