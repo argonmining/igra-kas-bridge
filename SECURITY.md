@@ -6,7 +6,7 @@ If you discover a security vulnerability in the Igra KAS Bridge, **please do not
 
 Instead, report it privately:
 
-- **Email:** [security@kat.foundation](mailto:security@kat.foundation)
+- **Email:** [socials@onargon.com](mailto:socials@onargon.com)
 - **Subject:** `[igra-kas-bridge] Security Vulnerability`
 
 Include as much detail as possible:
