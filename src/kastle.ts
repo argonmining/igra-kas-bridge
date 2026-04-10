@@ -21,6 +21,7 @@ export interface ScriptOption {
 export interface KastleWallet {
   connect(): Promise<boolean>;
   disconnect(): Promise<void>;
+  switchNetwork(network: 'mainnet' | 'testnet-10'): Promise<void>;
   getAccount(): Promise<KastleAccount>;
   signMessage(message: string): Promise<string>;
   sendKaspa(
@@ -80,23 +81,40 @@ export async function connectWallet(): Promise<KastleAccount> {
 }
 
 /**
- * Get current network from Kastle
+ * Verify the connected address belongs to the expected network.
+ * kaspa: prefix = mainnet, kaspatest: prefix = testnet-10.
+ * Deterministic — no wallet API calls required.
  */
-export async function getNetwork(): Promise<string> {
-  const kastle = getKastle();
-  const network = await kastle.request('kas:get_network');
-  return network as string;
+export function verifyNetworkByAddress(address: string): boolean {
+  const target = CONFIG.L1.NETWORK_ID;
+  if (target === 'mainnet') return address.startsWith('kaspa:');
+  return address.startsWith('kaspatest:');
 }
 
 /**
- * Verify wallet is on correct network
+ * Best-effort nudge to switch Kastle to the expected network.
+ * Primary gate remains address-prefix verification in handleConnect.
  */
-export async function verifyNetwork(): Promise<boolean> {
+export async function ensureNetwork(): Promise<void> {
   try {
-    const network = await getNetwork();
-    return network === CONFIG.L1.NETWORK_ID;
+    const kastle = getKastle();
+    const target = CONFIG.L1.NETWORK_ID;
+    const kastleNetwork = target === 'mainnet' ? 'mainnet' : 'testnet-10';
+    await kastle.switchNetwork(kastleNetwork);
   } catch {
-    return false;
+    // Swallow — verification happens via address prefix
+  }
+}
+
+/**
+ * Disconnect Kastle wallet.
+ */
+export async function disconnectWallet(): Promise<void> {
+  try {
+    const kastle = getKastle();
+    await kastle.disconnect();
+  } catch {
+    // Wallet may already be disconnected
   }
 }
 

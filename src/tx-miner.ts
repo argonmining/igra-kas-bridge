@@ -11,7 +11,7 @@
  * API verified against kaspa.d.ts type definitions.
  */
 
-import { CONFIG } from './config';
+import { CONFIG, getMainnetFee } from './config';
 import { getKaspaWasm, isWasmInitialized } from './kaspa-wasm';
 import { constructEntryPayload, payloadToHex } from './bridge';
 
@@ -47,21 +47,33 @@ export async function initRpcConnection(): Promise<void> {
   const kaspa = getKaspaWasm();
 
   try {
-    console.log('Creating Resolver...');
-    const resolver = new kaspa.Resolver();
+    const testnetNodeUrl = targetNetwork === 'testnet-10'
+      ? import.meta.env.VITE_TESTNET_NODE_URL
+      : undefined;
 
-    console.log(`Creating RpcClient for ${targetNetwork}...`);
-    rpcClient = new kaspa.RpcClient({
-      resolver,
-      networkId: targetNetwork,
-    });
+    if (testnetNodeUrl) {
+      console.log(`Creating RpcClient for ${targetNetwork} via direct URL: ${testnetNodeUrl}...`);
+      rpcClient = new kaspa.RpcClient({
+        url: testnetNodeUrl,
+        networkId: targetNetwork,
+      });
+    } else {
+      console.log('Creating Resolver...');
+      const resolver = new kaspa.Resolver();
+
+      console.log(`Creating RpcClient for ${targetNetwork}...`);
+      rpcClient = new kaspa.RpcClient({
+        resolver,
+        networkId: targetNetwork,
+      });
+    }
 
     console.log('Connecting to RPC...');
     await rpcClient.connect();
     isConnected = true;
     connectedNetworkId = targetNetwork;
 
-    console.log(`Connected to Kaspa network (${targetNetwork}) via resolver`);
+    console.log(`Connected to Kaspa network (${targetNetwork})${testnetNodeUrl ? ` via ${testnetNodeUrl}` : ' via resolver'}`);
   } catch (error) {
     console.error('RPC connection failed:', error);
     throw new Error(`RPC connection failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -99,7 +111,11 @@ export function buildEntryTransaction(
   const entryScriptPubKey = kaspa.payToAddressScript(entryAddress);
   const senderScriptPubKey = kaspa.payToAddressScript(senderAddress);
 
-  // Fee estimation: Kaspa charges ~1 sompi per gram of transaction mass.
+  // Bridge fee (mainnet only, from env variables)
+  const bridgeFee = getMainnetFee();
+  const bridgeFeeSompi = bridgeFee ? bridgeFee.amountSompi : 0n;
+
+  // Network fee estimation: Kaspa charges ~1 sompi per gram of transaction mass.
   // Entry transactions have a 33-byte payload which adds mass.
   // Base mass ~700 + ~140 per input + ~120 per output + payload mass.
   // Use a generous minimum that covers typical entry transactions.
@@ -113,16 +129,17 @@ export function buildEntryTransaction(
     totalAvailable += utxo.amount;
     selectedUtxos.push(utxo);
 
-    const estimatedFee = baseFee + perInputFee * BigInt(selectedUtxos.length);
-    if (totalAvailable >= amountSompi + estimatedFee) {
+    const estimatedNetworkFee = baseFee + perInputFee * BigInt(selectedUtxos.length);
+    if (totalAvailable >= amountSompi + bridgeFeeSompi + estimatedNetworkFee) {
       break;
     }
   }
 
-  const estimatedFee = baseFee + perInputFee * BigInt(selectedUtxos.length);
+  const estimatedNetworkFee = baseFee + perInputFee * BigInt(selectedUtxos.length);
 
-  if (totalAvailable < amountSompi + estimatedFee) {
-    throw new Error(`Insufficient funds. Have: ${totalAvailable}, Need: ${amountSompi} + ~${estimatedFee} fee`);
+  if (totalAvailable < amountSompi + bridgeFeeSompi + estimatedNetworkFee) {
+    const totalNeeded = amountSompi + bridgeFeeSompi + estimatedNetworkFee;
+    throw new Error(`Insufficient funds. Have: ${totalAvailable}, Need: ${totalNeeded} (${amountSompi} amount + ${bridgeFeeSompi} bridge fee + ~${estimatedNetworkFee} network fee)`);
   }
 
   const inputs: any[] = selectedUtxos.map(utxo => ({
@@ -136,7 +153,7 @@ export function buildEntryTransaction(
     utxo: utxo,
   }));
 
-  const change = totalAvailable - amountSompi - estimatedFee;
+  const change = totalAvailable - amountSompi - bridgeFeeSompi - estimatedNetworkFee;
 
   // Output 0: KAS Locking UTXO (Entry address with exact amount) - MUST be first per Igra spec
   const outputs: any[] = [
@@ -149,7 +166,19 @@ export function buildEntryTransaction(
     },
   ];
 
-  // Output 1: Change back to sender (if any)
+  // Output 1: Bridge fee (mainnet only)
+  if (bridgeFee && bridgeFeeSompi > 0n) {
+    const feeScriptPubKey = kaspa.payToAddressScript(bridgeFee.address);
+    outputs.push({
+      value: bridgeFeeSompi,
+      scriptPublicKey: {
+        version: feeScriptPubKey.version,
+        script: feeScriptPubKey.script,
+      },
+    });
+  }
+
+  // Change output: back to sender (if any)
   if (change > 0n) {
     outputs.push({
       value: change,
@@ -258,9 +287,9 @@ export async function mineTxId(
 }
 
 /**
- * Serialize transaction to JSON for Kastle signing
+ * Serialize transaction to JSON for wallet signing
  */
-export function serializeForKastle(tx: any): string {
+export function serializeTransaction(tx: any): string {
   return tx.serializeToSafeJSON();
 }
 

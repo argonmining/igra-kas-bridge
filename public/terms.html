@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terms of Use — iKAS Bridge</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <style>
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #111118;
+      --text-primary: #f0f0f5;
+      --text-secondary: #8888a0;
+      --accent-primary: #6366f1;
+      --accent-secondary: #818cf8;
+      --border: #222236;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.7;
+      padding: 2rem 1rem 4rem;
+    }
+
+    .container {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .last-updated {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      margin-bottom: 2rem;
+    }
+
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 2rem 0 0.75rem;
+      color: var(--accent-secondary);
+    }
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.5rem;
+    }
+
+    p {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin-bottom: 0.75rem;
+    }
+
+    strong { color: var(--text-primary); }
+
+    ul, ol {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      margin: 0.5rem 0 0.75rem 1.5rem;
+    }
+
+    li { margin-bottom: 0.4rem; }
+
+    a {
+      color: var(--accent-secondary);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 1.5rem;
+      font-size: 0.85rem;
+    }
+
+    .back-link::before { content: '← '; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="back-link">Back to Bridge</a>
+
+    <h1>iKAS Bridge Interface — Terms of Use</h1>
+    <p class="last-updated">Last updated: March 2026</p>
+
+    <h2>Preamble</h2>
+    <p>Welcome to the user interface ("<strong>User Interface</strong>") for the iKAS bridge ("<strong>iKAS Bridge</strong>"). The following terms of use ("<strong>Terms</strong>") govern your access and use of the User Interface, including all related tools, web applications, smart contracts, and application programming interfaces (APIs) made available thereon.</p>
+    <p>The operator of the User Interface ("<strong>Interface Operator</strong>") reserves the right to modify or update these Terms at any time in its sole discretion. In such case, the "last updated" date above will be revised accordingly. By continuing to access or use the User Interface, you acknowledge and accept the Terms as updated from time to time. If you do not agree to these Terms, you must immediately cease all access to and use of the User Interface.</p>
+
+    <h2>1. Eligibility and Prohibited Jurisdictions</h2>
+    <p>By accessing or using the User Interface, you represent and warrant that you:</p>
+    <ol>
+      <li>have the legal capacity and authority to accept and comply with these Terms;</li>
+      <li>are not prohibited from accessing or using the User Interface under any applicable laws or regulations;</li>
+      <li>are not subject to any sanctions or restrictive measures administered or enforced by the United Nations, the United States, the European Union, or the United Kingdom, and are not owned or controlled by, or acting on behalf of, any such person;</li>
+      <li>are not located in, organized, or resident in any jurisdiction that is subject to comprehensive sanctions or embargoes, including, without limitation, Cuba, Iran, North Korea, and Syria, or any region subject to comprehensive sanctions (including Crimea, Donetsk, or Luhansk) ("<strong>Prohibited Jurisdictions</strong>"); and</li>
+      <li>will not access or use the User Interface through any means intended to circumvent applicable restrictions, including through the use of VPNs, proxies, or similar technologies.</li>
+    </ol>
+    <p>We reserve our right, at our sole discretion, to restrict or block access to the User Interface based on geographical location or other compliance-related criteria.</p>
+
+    <h2>2. iKAS Bridge</h2>
+
+    <h3>2.1 Introduction and Overview</h3>
+    <p>The Kaspa network ("<strong>Kaspa</strong>") is a decentralized proof-of-work blockchain designed to enable high-throughput and fast confirmation times. The native cryptocurrency of Kaspa is KAS ("<strong>KAS</strong>"), which is used for transactions and network security.</p>
+    <p>The Igra network ("<strong>Igra Network</strong>") is a separate, EVM-compatible network built to enable smart contract functionality and decentralized applications in connection with Kaspa. To facilitate interactions between Kaspa and the Igra Network, a representation of KAS is made available on the Igra Network in the form of iKAS ("<strong>iKAS</strong>"). iKAS is a token on the Igra Network that is intended to represent a corresponding amount of KAS and may be used within protocol deployed on the Igra Network.</p>
+
+    <h3>2.2 Minting of iKAS (Entry Transaction)</h3>
+    <p>The minting of iKAS on the Igra Network is triggered by user-initiated transactions on Kaspa that comply with the applicable technical requirements of the bridging mechanism ("<strong>Entry Transaction</strong>"). The Entry Transaction is processed in a permissionless manner and, upon detection by the Igra Network, may result in a corresponding increase of the user's iKAS balance on the Igra Network.</p>
+    <p>The minting process is governed by the protocol-level rules of the Igra Network and relies on the underlying consensus of Kaspa. By using the User Interface, you acknowledge that the correct formation and submission of the Entry Transaction is your sole responsibility, and that failure to comply with the applicable technical requirements may result in delays, failed minting, or permanent loss of funds. Blockchain transactions are irreversible and cannot be undone once submitted.</p>
+    <p>The minting of iKAS is executed through decentralized network processes. Neither the Interface Operator nor any affiliated party has control over, or the ability to intervene in, the minting process once an Entry Transaction has been submitted, and no guarantee is given that any Entry Transaction will result in the minting of iKAS or that such minting will occur within any specific timeframe.</p>
+
+    <h3>2.3 Burning of iKAS (Exit Transaction)</h3>
+    <p>Users who wish to convert iKAS on the Igra Network into KAS on Kaspa may initiate a withdrawal process ("<strong>Exit Transaction</strong>"). Such process involves the reduction or burning of the user's iKAS balance on the Igra Network and, subject to the applicable process, the release of a corresponding amount of KAS on Kaspa.</p>
+    <p>Due to the technical limitations of Kaspa, which does not support programmable smart contract logic for automated withdrawals, the exit process requires manual transaction construction and execution by a multi-signature mechanism controlled by independent signers. As a result, the processing of Exit Transactions is not instantaneous and may take several days or longer depending on network conditions, transaction volume, and operational factors. By using the User Interface to mint iKAS, you acknowledge and agree that:</p>
+    <ul>
+      <li>the processing of Exit Transactions is subject to delays and no guaranteed processing time or service level applies;</li>
+      <li>Exit Transactions may be delayed, limited, or not processed at all due to technical constraints, security considerations, or excessive demand;</li>
+      <li>minimum and maximum withdrawal amounts may be imposed, and limits may apply to the number or frequency of Exit Transactions that are processed within a given period; and</li>
+      <li>fees or commissions may be charged in connection with Exit Transactions.</li>
+    </ul>
+    <p>The availability and functioning of the exit process depend on the continued operation and coordination of independent network participants, including multi-signature signers, over which neither the Interface Operator nor any affiliated party has control or responsibility.</p>
+
+    <h3>2.4 Liability Waiver for iKAS Bridge</h3>
+    <p>The iKAS Bridge involves interactions with blockchain-based systems and smart contracts that are inherently subject to risks, including potential vulnerabilities, bugs, logic errors, or attacks that may result in partial or total loss of funds. By interacting with the iKAS Bridge, you do so at your own risk, fully understanding and accepting the inherent risks associated with minting and burning iKAS.</p>
+    <p>The iKAS Bridge and the User Interface are provided on an "as-is" and "as-available" basis, without any guarantees of availability, functionality, or performance. To the fullest extent permitted by applicable law, the Interface Operator disclaims liability for any loss or damages arising from or in connection with your use of the User Interface.</p>
+
+    <h2>3. User Interface Features</h2>
+
+    <h3>3.1 Overview</h3>
+    <p>The User Interface serves as a graphical user interface that provides an easy way to interact with the iKAS Bridge as described herein. The Interface Operator reserves the right to remove features from the User Interface or to discontinue the operation of the User Interface in its entirety at any time without prior notice.</p>
+
+    <h3>3.2 Programmatic Access (No Dependency on User Interface)</h3>
+    <p>As the iKAS Bridge is a permissionless protocol, it can be accessed by Users at any time via other user interfaces or by interacting directly with the protocol programmatically using any programming language or tooling, including but not limited to Rust, Python, or JavaScript. This means that its usability and accessibility does not depend on the Interface Operator or the availability of the User Interface.</p>
+
+    <h3>3.3 Display of Network Information</h3>
+    <p>The User Interface may display publicly available information relating to Kaspa and the Igra Network ("<strong>Network Information</strong>"). The Network Information is automatically sourced via application programming interfaces (APIs) and displayed for informational purposes only. The Interface Operator does not assume any responsibility for the accuracy, completeness or timeliness of the Network Information and shall not be liable for any claims or damages related to errors, inaccuracies, or delays in the display of the Network Information or any decisions, transaction, acts or omissions that you make in reliance thereon.</p>
+
+    <h3>3.4 Interacting with iKAS Bridge</h3>
+
+    <p><strong>3.4.1 Connecting Wallet to User Interface</strong></p>
+    <p>To interact with the iKAS Bridge via the User Interface, you must first connect one of the third-party wallets listed under the "Connect" tab ("<strong>Wallet</strong>") to the User Interface. Wallets store and manage the private keys to the blockchain addresses that were created with the Wallet or manually imported into the Wallet. As these Wallets store the private keys which are required to sign transactions on-chain, they can be used to execute transactions and publish them to the Network.</p>
+    <p>When you connect a Wallet, the User Interface will ask for permission to send Sign Requests (as defined in Section 3.4.2 below) to the Wallet. During this process, your Wallet will show the blockchain addresses managed by the Wallet that can be connected to the User Interface. You can modify these permissions at any time in the settings of the Wallet. Please note that you can only interact with blockchain addresses that are both managed by the Wallet and connected to the User Interface.</p>
+    <p>The use of Wallets is subject to the terms and conditions of the respective provider. The Interface Operator has no control over the blockchain addresses that are managed by the Wallet and connected to the User Interface and no ability to access any assets that are held thereon. You are solely responsible for the security of the Wallet as well as the corresponding private keys and passwords. The Interface Operator does not assume any responsibility for the connected Wallets, regardless of whether or not they are used to effectuate transactions and shall not be liable for any damages arising out of or related to your use of the Wallets or your inability to connect or use the Wallets to execute transactions.</p>
+
+    <p><strong>3.4.2 Sign Requests</strong></p>
+    <p>Once you have connected a Wallet to the User Interface, you can use the User Interface to initiate transactions from your blockchain address by generating standardized transaction messages ("<strong>Sign Requests</strong>"). Sign Requests that are generated on the User Interface are sent to the connected Wallet for approval. To complete the transaction, you must approve the Sign Request by signing the transaction with the connected Wallet. The User Interface will then display whether the transaction was successful.</p>
+    <p>Transactions that are signed with a Wallet are executed on Kaspa or the Igra Network without any involvement of the Interface Operator. The User Interface does not execute transactions on your behalf and does not control the execution of transactions initiated by you. You are fully responsible for all input you make while using the User Interface.</p>
+
+    <p><strong>3.4.3 Transaction Fees</strong></p>
+    <p>All interactions with Kaspa, regardless of whether they are initiated on the User Interface, require the payment of transaction fees. The transaction fees required to execute a transaction depend on the activity on Kaspa and is entirely outside of the control of the Interface Operator. By using the User Interface to initiate transactions, you acknowledge and agree that transaction fees are non-refundable under any circumstances.</p>
+
+    <h2>4. Intellectual Property Rights</h2>
+    <p>All rights, title, and interest in and to the User Interface, including all underlying software, design, content, trademarks, logos, and other intellectual property, are and shall remain the exclusive property of the Interface Operator or its licensors. Nothing in these Terms grants you any right, title, or interest in or to the User Interface, except for a limited, non-exclusive, non-transferable, and revocable right to access and use the User Interface solely for its intended purpose in accordance with these Terms. You shall not copy, modify, reproduce, distribute, reverse engineer, decompile, or otherwise attempt to derive the source code of the User Interface, except to the extent permitted by applicable law.</p>
+
+    <h2>5. Third-Party Links</h2>
+    <p>The User Interface may contain links to websites and content that is controlled or operated by third parties ("<strong>Third-Party Links</strong>"). The Interface Operator provides these Third-Party Links for convenience only, and the inclusion of any Third-Party Links on the User Interface does not imply any endorsement by the Interface Operator of the Third-Party Links and/or their operators. The Interface Operator is not responsible for any content associated with the Third-Party Links.</p>
+    <p>If you believe that any Third-Party Links contain or promote illegal, harmful, fraudulent, infringing, obscene, defamatory, threatening, intimidating, harassing, hateful, racially, ethnically or otherwise objectionable content, please contact us via <a href="mailto:info@usecorn.com">info@usecorn.com</a> so that we can remove any such Third-Party Links from the User Interface.</p>
+
+    <h2>6. Disclaimers and Limited Warranty</h2>
+    <p>The Interface Operator does not guarantee that the User Interface is free from defects, errors, bugs, and security vulnerabilities or that it will be available at any time. The access to and use of the User Interface is made at your own risk. The Interface Operator gives no assurance that any function of the User Interface will satisfy your requirements, provide the intended results, meet any performance or reliability standards. You understand and agree that the User Interface is provided on an "as is" and "as available" basis and that the Interface Operator expressly disclaims all warranties or conditions of any kind, whether express, implied, statutory or otherwise.</p>
+
+    <h2>7. Limitation of Liability</h2>
+    <p>To the fullest extent permitted by applicable law, the Interface Operator shall be liable only for direct damages caused by its wilful misconduct or gross negligence. Liability for any indirect, incidental, special, punitive, or consequential damages, including loss of profit or other economic loss, is excluded. This limitation of liability also applies to any use of the iKAS Bridge as described in Section 2.</p>
+
+    <h2>8. Miscellaneous</h2>
+
+    <h3>8.1 User Feedback</h3>
+    <p>The Interface Operator appreciates and encourages you to provide feedback to the User Interface. If you provide feedback, you agree that the Interface Operator is free to use it and may permit others to use it without any restriction or compensation to you.</p>
+
+    <h3>8.2 Tax Considerations</h3>
+    <p>It is your sole responsibility to seek relevant tax advice to comply with any applicable tax obligations in whichever jurisdiction and to measure the tax impact of the use of the User Interface and the use of the features offered thereon.</p>
+
+    <h3>8.3 Entire Agreement and Severability</h3>
+    <p>These Terms contain the entire agreement between the Interface Operator and you regarding the subject matter hereof and supersedes all understandings and agreements whether written or oral.</p>
+    <p>If any provision of these Terms is invalid, illegal, or unenforceable in any jurisdiction, such invalidity, illegality, or unenforceability shall not affect any other provision of these Terms or invalidate or render unenforceable such provision in any other jurisdiction. Upon such determination that any provision is invalid, illegal, or unenforceable, these Terms shall be modified to effectuate the original intent of the parties as closely as possible.</p>
+
+    <h3>8.4 Governing Law and Jurisdiction</h3>
+    <p>These Terms shall be construed and interpreted in accordance with the substantive laws of the Cayman Islands. Any dispute arising out of or in conjunction with these Terms shall be submitted to the exclusive jurisdiction of the ordinary courts of the Cayman Islands.</p>
+
+    <h3>8.5 Class Action Waiver</h3>
+    <p>To the fullest extent permitted by any applicable law, the User waives any right to participate in a class action lawsuit or a class-wide arbitration against the Interface Operator or any individual or entity involved in the operation of the User Interface.</p>
+
+    <h2>9. Contact</h2>
+    <p>Any questions related to these Terms can be sent to Kaspa Alliance for Transparency via email at <a href="mailto:legal@kat.foundation">legal@kat.foundation</a>.</p>
+  </div>
+</body>
+</html>

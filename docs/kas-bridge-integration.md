@@ -4,12 +4,13 @@ The KAS Bridge enables users to wrap KAS from Kaspa L1 into iKAS on Igra L2. Thi
 
 ## Overview
 
-The wrapping process constructs **Entry transactions** on Kaspa L1 that are detected by the Viaduct and processed by IgReth, Igra's EVM engine. The bridge supports two modes:
+The wrapping process constructs **Entry transactions** on Kaspa L1 that are detected by the Viaduct and processed by IgReth, Igra's EVM engine. The bridge supports three modes:
 
-| Mode | L1 Network | Mechanism | TX ID Prefix |
-|------|------------|-----------|--------------|
-| Galleon Testnet | Kaspa Testnet-10 | KAS locked in Entry address | `97b4` |
-| Galleon Test Mainnet | Kaspa Mainnet | Self-send (KAS stays in wallet) | `97b5` |
+| Mode | L1 Network | Mechanism | TX ID Prefix | Min Amount |
+|------|------------|-----------|--------------|------------|
+| Galleon Testnet | Kaspa Testnet-10 | KAS locked in Entry address | `97b4` | 1 KAS |
+| Galleon Test Mainnet | Kaspa Mainnet | Self-send (KAS stays in wallet) | `97b5` | 1 KAS |
+| Igra Mainnet | Kaspa Mainnet | KAS locked in Entry address | `97b1` | 10 KAS |
 
 ---
 
@@ -40,6 +41,19 @@ In testnet mode, KAS is sent to a designated Entry address where it is locked.
 | Minimum Amount | 1 KAS |
 
 In test mainnet mode, KAS is sent back to the user's own address with an Entry payload. **KAS never leaves the user's wallet**—the transaction simply tags the KAS with the Entry payload, which the Igra network detects and uses to mint iKAS.
+
+### Igra Mainnet
+
+| Parameter | Value |
+|-----------|-------|
+| L1 Network | Kaspa Mainnet |
+| Entry Address | `kaspa:ppvnxxzm0rr37zpnwux2f2ntvfpr4uqdpm7zsvsztg3en92r7gs0wkmr72q9n` |
+| TX ID Prefix | `97b1` |
+| L2 Chain ID | 38833 |
+| L2 RPC | `https://rpc.igralabs.com:8545` |
+| Minimum Amount | 10 KAS |
+
+In mainnet mode, KAS is sent to the Entry address where it is locked — the same mechanism as Galleon Testnet, but on Kaspa Mainnet. The 10 KAS minimum serves as DDoS protection.
 
 ---
 
@@ -81,8 +95,9 @@ For the Igra Network to recognize an Entry transaction, the **Kaspa transaction 
 
 | Network | Required Prefix |
 |---------|-----------------|
-| Testnet-10 | `97b4` |
-| Mainnet | `97b5` |
+| Testnet-10 (Galleon Testnet) | `97b4` |
+| Mainnet (Galleon Test Mainnet) | `97b5` |
+| Mainnet (Igra Mainnet) | `97b1` |
 
 ### Mining Process
 

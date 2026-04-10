@@ -2,10 +2,10 @@
  * Igra Bridge Configuration
  *
  * Configuration for bridging KAS from Kaspa L1 to iKAS on Igra L2.
- * Supports both Galleon Testnet (testnet-10) and Galleon Test Mainnet (mainnet).
+ * Supports Galleon Testnet, Galleon Test Mainnet, and Igra Mainnet.
  */
 
-export type NetworkMode = 'testnet' | 'test-mainnet';
+export type NetworkMode = 'testnet' | 'test-mainnet' | 'mainnet';
 
 export interface NetworkConfig {
   L1: {
@@ -14,6 +14,7 @@ export interface NetworkConfig {
     readonly ENTRY_ADDRESS: string | null;
     readonly TX_ID_PREFIX: string;
     readonly MIN_BRIDGE_AMOUNT_KAS: number;
+    readonly MAX_BRIDGE_AMOUNT_KAS: number | null;
     readonly SOMPI_PER_KAS: bigint;
     readonly EXPLORER_BASE: string;
   };
@@ -34,6 +35,7 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       ENTRY_ADDRESS: 'kaspatest:qqmstl2znv9tsfgcmj9shme82my867tapz7pdu4ztwdn6sm9452jj5mm0sxzw',
       TX_ID_PREFIX: '97b4',
       MIN_BRIDGE_AMOUNT_KAS: 1,
+      MAX_BRIDGE_AMOUNT_KAS: null,
       SOMPI_PER_KAS: 100_000_000n,
       EXPLORER_BASE: 'https://explorer-tn10.kaspa.org',
     },
@@ -52,6 +54,7 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       ENTRY_ADDRESS: null, // Self-send: KAS goes back to sender's own address
       TX_ID_PREFIX: '97b5',
       MIN_BRIDGE_AMOUNT_KAS: 1,
+      MAX_BRIDGE_AMOUNT_KAS: null,
       SOMPI_PER_KAS: 100_000_000n,
       EXPLORER_BASE: 'https://explorer.kaspa.org',
     },
@@ -62,6 +65,25 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       CURRENCY_SYMBOL: 'iKAS',
       CURRENCY_DECIMALS: 18,
       BLOCK_EXPLORER: 'https://explorer.galleon.igralabs.com',
+    },
+  },
+  mainnet: {
+    L1: {
+      NETWORK_ID: 'mainnet',
+      ENTRY_ADDRESS: 'kaspa:ppvnxxzm0rr37zpnwux2f2ntvfpr4uqdpm7zsvsztg3en92r7gs0wkmr72q9n',
+      TX_ID_PREFIX: '97b1',
+      MIN_BRIDGE_AMOUNT_KAS: parseInt(import.meta.env.VITE_MAINNET_MIN_KAS, 10) || 10,
+      MAX_BRIDGE_AMOUNT_KAS: null,
+      SOMPI_PER_KAS: 100_000_000n,
+      EXPLORER_BASE: 'https://explorer.kaspa.org',
+    },
+    L2: {
+      NETWORK_NAME: 'Igra Mainnet',
+      RPC_URL: 'https://rpc.igralabs.com:8545',
+      CHAIN_ID: 38833,
+      CURRENCY_SYMBOL: 'iKAS',
+      CURRENCY_DECIMALS: 18,
+      BLOCK_EXPLORER: 'https://explorer.igralabs.com',
     },
   },
 };
@@ -80,7 +102,7 @@ const SHARED = {
 } as const;
 
 // Current network state
-let currentMode: NetworkMode = 'testnet';
+let currentMode: NetworkMode = 'mainnet';
 
 /**
  * Get the current network mode
@@ -118,7 +140,7 @@ export function isValidL2Address(address: string): boolean {
  * Validates a Kaspa address for the current network
  */
 export function isValidKaspaAddress(address: string): boolean {
-  if (currentMode === 'test-mainnet') {
+  if (currentMode === 'test-mainnet' || currentMode === 'mainnet') {
     return address.startsWith('kaspa:');
   }
   return address.startsWith('kaspatest:');
@@ -147,4 +169,31 @@ export function getEntryAddress(senderAddress?: string): string {
   if (entry !== null) return entry;
   if (!senderAddress) throw new Error('Sender address required for self-send mode');
   return senderAddress;
+}
+
+/**
+ * Mainnet bridge fee configuration (from env variables).
+ * Set VITE_MAINNET_FEE_KAS (whole KAS) and VITE_MAINNET_FEE_ADDRESS in Railway.
+ * If either is missing, no fee is applied.
+ */
+export interface BridgeFee {
+  amountSompi: bigint;
+  address: string;
+}
+
+export function getMainnetFee(): BridgeFee | null {
+  if (currentMode !== 'mainnet') return null;
+
+  const feeKas = import.meta.env.VITE_MAINNET_FEE_KAS;
+  const feeAddress = import.meta.env.VITE_MAINNET_FEE_ADDRESS;
+
+  if (!feeKas || !feeAddress) return null;
+
+  const kas = parseInt(feeKas, 10);
+  if (isNaN(kas) || kas <= 0) return null;
+
+  return {
+    amountSompi: BigInt(kas) * 100_000_000n,
+    address: feeAddress.trim(),
+  };
 }
