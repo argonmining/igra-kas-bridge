@@ -306,7 +306,7 @@ The withdrawal flow is handled on Igra L2 by the deployed `KasExitBridge` contra
 
 1. User selects the **Igra Mainnet · Withdraw** tab.
 2. The UI waits for the Kaspa WASM SDK to initialise (required for bech32 checksum validation).
-3. The UI calls `getConfig()` on the contract to read the live policy (min/max exit in sompi, throttle window parameters, fee policy address). During the canary launch: 1 – 5 iKAS per withdrawal, up to 16 withdrawals or 32 iKAS per ~18-hour (2¹⁶-block) window, fee policy = `address(0)` (no fee).
+3. The UI calls `getConfig()` on the contract to read the live policy (min/max exit in sompi, throttle window parameters, fee policy address) and renders the input hint + placeholder directly from those values. The protocol owner can retune these via `setThrottleParams` / `setExitAmountPolicy` at any time and the UI picks up the new values the next time the Withdraw tab is opened — no code change or redeploy required. Production launch values are 1,000 – 50,000 iKAS per withdrawal, up to 20 withdrawals or 200,000 iKAS per ~24-hour (86,400-block) window, with `feePolicy = address(0)` (no fee) at launch.
 4. User connects an EVM wallet (Kasware EVM, Kastle EVM, MetaMask, or WalletConnect). The UI uses `wallet_switchEthereumChain` with EIP-3085 fallback to ensure the wallet is on chain `0x97b1`.
 5. User enters an iKAS amount (≤ 8 decimal places) and a `kaspa:`-prefixed payout address. The address is validated client-side via `new Address(...)` from the Kaspa WASM SDK, which performs full bech32 decode + checksum verification.
 6. The UI runs a preflight: `quoteFee` (skipped when `feePolicy == address(0)`) + `throttleStatus` + balance check. Any failure surfaces as a specific, friendly error before the user signs.

@@ -714,8 +714,11 @@ function refreshExitAutofillButton(): void {
 }
 
 function renderExitPolicyHint(): void {
+  const input = elements.exitAmountInput();
+
   if (!exitConfig) {
     elements.exitAmountHint().textContent = 'Loading live policy…';
+    input.placeholder = 'Amount in iKAS';
     return;
   }
 
@@ -731,6 +734,10 @@ function renderExitPolicyHint(): void {
     `Between <strong>${minIKas}</strong> and <strong>${maxIKas}</strong> iKAS per withdrawal. ` +
     `Up to <strong>${exitConfig.throttleMaxExitsPerWindow}</strong> withdrawals or ` +
     `<strong>${perWindow}</strong> iKAS every ${windowLabel}.`;
+
+  // Placeholder reflects the live minimum so the UI doesn't go stale
+  // when the protocol updates its exit-amount policy.
+  input.placeholder = `${minIKas} – ${maxIKas} iKAS`;
 }
 
 function hideExitPreview(): void {
