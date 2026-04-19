@@ -286,3 +286,65 @@ The bridge integrates with the [Kastle wallet](https://chromewebstore.google.com
 4. **Address Validation**: Validate L2 addresses match the Ethereum address format (`0x` + 40 hex characters).
 
 5. **Network Mismatch**: Verify the connected wallet network matches the selected bridge mode (testnet vs mainnet).
+
+---
+
+## Withdrawal Flow (iKAS → KAS)
+
+The withdrawal flow is handled on Igra L2 by the deployed `KasExitBridge` contract. It is only available on Igra Mainnet.
+
+### Contract reference
+
+| Parameter | Value |
+|-----------|-------|
+| Proxy address (Igra Mainnet) | `0x4bb88C213d3eD9dc4bae694f1bc1bF745903b2d0` (ERC-1967 UUPS) |
+| Verified Solidity source | [`kasExitBridge/`](../kasExitBridge/) in the repo root |
+| Chain ID | `38833` (`0x97b1`) |
+| Owner | Ownable2Step, controlled off-chain by Igra Labs |
+
+### Flow
+
+1. User selects the **Igra Mainnet · Withdraw** tab.
+2. The UI waits for the Kaspa WASM SDK to initialise (required for bech32 checksum validation).
+3. The UI calls `getConfig()` on the contract to read the live policy (min/max exit in sompi, throttle window parameters, fee policy address) and renders the input hint + placeholder directly from those values. The protocol owner can retune these via `setThrottleParams` / `setExitAmountPolicy` at any time and the UI picks up the new values the next time the Withdraw tab is opened — no code change or redeploy required. Production launch values are 1,000 – 50,000 iKAS per withdrawal, up to 20 withdrawals or 200,000 iKAS per ~24-hour (86,400-block) window, with `feePolicy = address(0)` (no fee) at launch.
+4. User connects an EVM wallet (Kasware EVM, Kastle EVM, MetaMask, or WalletConnect). The UI uses `wallet_switchEthereumChain` with EIP-3085 fallback to ensure the wallet is on chain `0x97b1`.
+5. User enters an iKAS amount (≤ 8 decimal places) and a `kaspa:`-prefixed payout address. The address is validated client-side via `new Address(...)` from the Kaspa WASM SDK, which performs full bech32 decode + checksum verification.
+6. The UI runs a preflight: `quoteFee` (skipped when `feePolicy == address(0)`) + `throttleStatus` + balance check. Any failure surfaces as a specific, friendly error before the user signs.
+7. The user confirms in a dedicated modal with itemized breakdown + acknowledgment of the manual multi-sig timing.
+8. The UI re-quotes the fee immediately before sending (TOCTOU guard), re-asserts the chain id, and calls `publicClient.simulateContract` before `walletClient.writeContract`. Any typed contract revert (`ExitAmountBelowMinimum`, `InvalidMsgValue`, `ThrottleExitCountExceeded`, etc.) is decoded and displayed as dedicated copy.
+9. Once the receipt is mined, the UI decodes `ExitRequested(requestId, messageId, feeAmountSompi)` and `BurnIKas(amount)` events from the logs. The burn amount is shown, along with the request id and a link to the payout address on the Kaspa explorer. **`messageId` (Hyperlane internal) is never surfaced to the user.**
+
+### Scaling (critical)
+
+The contract uses `SOMPI_SCALE = 10^10`:
+
+```
+msg.value (wei, 18 dec) == (unlockAmountSompi + feeAmountSompi) * 10^10
+```
+
+The equality is **exact** — no slack. The UI reconstructs the value from a fresh fee quote on every send.
+
+### Safety finding — contract does NOT verify bech32 checksum
+
+`KaspaAddressLib.verifyKaspaAddress` validates only the `kaspa:` prefix, total length (≤ 67), and that every character after the prefix is in the Kaspa bech32 alphabet (`qpzry9x8gf2tvdw0s3jn54khce6mua7l`). It does **not** verify the bech32 checksum.
+
+A typo that still matches the charset can therefore pass the contract's check, burn iKAS, and leave the committee needing to resolve the mistake out-of-band. The UI therefore refuses to enable the submit button until the Kaspa WASM SDK has confirmed the checksum, and never falls back to charset-only validation for withdrawals.
+
+### Errors surfaced to users
+
+| Contract error | UI message |
+|----------------|------------|
+| `InvalidKasPayoutAddress` | "The payout address was rejected by the contract. Please double-check and try again." |
+| `InvalidExitAmount` | "Amount must be greater than zero." |
+| `ExitAmountBelowMinimum(amount, min)` | "Amount is below the current minimum of X iKAS." |
+| `ExitAmountAboveMaximum(amount, max)` | "Amount is above the current maximum of X iKAS per withdrawal." |
+| `ThrottleExitCountExceeded` | "This withdrawal window is full. Please try again once the next window opens." |
+| `ThrottleUnlockAmountExceeded(_, _, remaining)` | "Only X iKAS remaining in this withdrawal window." |
+| `InvalidMsgValue(expected, actual)` | "The fee changed right before sending. Please re-open the withdrawal form and try again." |
+| `ExitRequestCounterExhausted` | "The exit bridge has reached its lifetime request limit." |
+| `CurrentBlockNumberOverflow(_)` | "Chain state is in an unexpected range. Please try again later." |
+| Wallet rejection (code 4001) | "You cancelled the withdrawal." |
+
+### Hyperlane
+
+Internally, `requestExit` dispatches a Hyperlane message that a multi-signature committee uses to release KAS on Kaspa L1. **This is an implementation detail and is never surfaced in the UI.** The user only sees the L2 transaction hash, the request id, the burned amount, and a link to their Kaspa payout address so they can watch for the eventual incoming KAS.

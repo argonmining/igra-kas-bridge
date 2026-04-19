@@ -10,7 +10,9 @@
     "start": "serve dist -l ${PORT:-3000}"
   },
   "dependencies": {
-    "serve": "^14.2.4"
+    "@walletconnect/ethereum-provider": "^2.23.9",
+    "serve": "^14.2.4",
+    "viem": "^2.48.1"
   },
   "devDependencies": {
     "typescript": "^5.7.2",
