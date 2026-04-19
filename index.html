@@ -632,6 +632,69 @@
     }
 
     /* Exit-flow specific elements */
+    .modal-subtitle {
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+      margin-bottom: 1rem;
+    }
+
+    .exit-confirm-modal {
+      max-width: 460px;
+    }
+
+    .exit-hero {
+      background: linear-gradient(
+        135deg,
+        rgba(16, 185, 129, 0.08) 0%,
+        rgba(99, 102, 241, 0.06) 100%
+      );
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      margin-bottom: 0.625rem;
+    }
+
+    .exit-hero-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .exit-hero-label {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+    }
+
+    .exit-hero-value {
+      font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+      color: var(--success);
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .exit-hero-to {
+      color: var(--text-secondary);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      margin-bottom: 0.2rem;
+    }
+
+    .exit-hero-payout {
+      font-family: 'SF Mono', 'Monaco', 'Menlo', 'Consolas', monospace;
+      font-size: 0.78rem;
+      color: var(--text-primary);
+      word-break: break-all;
+      line-height: 1.45;
+    }
+
     .exit-breakdown {
       background: var(--bg-tertiary);
       border-radius: 8px;
@@ -640,6 +703,12 @@
       gap: 0.4rem;
       margin-bottom: 1rem;
       font-size: 0.82rem;
+    }
+
+    .exit-breakdown-compact {
+      padding: 0.6rem 0.875rem;
+      gap: 0.3rem;
+      margin-bottom: 0.75rem;
     }
 
     .exit-breakdown-row {
@@ -664,6 +733,10 @@
       color: var(--text-primary);
       text-align: right;
       word-break: break-word;
+    }
+
+    .exit-breakdown-burn {
+      color: var(--warning);
     }
 
     .exit-policy-hint {
@@ -1184,14 +1257,25 @@
 
     <!-- Exit Confirmation Modal -->
     <div id="exit-confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="exit-confirm-title">
-      <div class="modal">
+      <div class="modal exit-confirm-modal">
         <h3 id="exit-confirm-title">Confirm Withdrawal</h3>
-        <p>Please review and acknowledge before signing.</p>
+        <p class="modal-subtitle">Review the details below, then sign in your wallet.</p>
 
-        <div class="exit-breakdown">
+        <!-- Hero: what the user gets, and where -->
+        <div class="exit-hero">
+          <div class="exit-hero-head">
+            <span class="exit-hero-label">You will receive</span>
+            <span class="exit-hero-value" id="exit-confirm-receive">-</span>
+          </div>
+          <div class="exit-hero-to">on Kaspa address</div>
+          <div class="exit-hero-payout" id="exit-confirm-payout">-</div>
+        </div>
+
+        <!-- Supporting breakdown -->
+        <div class="exit-breakdown exit-breakdown-compact">
           <div class="exit-breakdown-row">
             <span class="exit-breakdown-label">Burn amount</span>
-            <span class="exit-breakdown-value" id="exit-confirm-burn">-</span>
+            <span class="exit-breakdown-value exit-breakdown-burn" id="exit-confirm-burn">-</span>
           </div>
           <div class="exit-breakdown-row">
             <span class="exit-breakdown-label">Bridge fee</span>
@@ -1201,23 +1285,20 @@
             <span class="exit-breakdown-label">Total iKAS required</span>
             <span class="exit-breakdown-value" id="exit-confirm-total">-</span>
           </div>
-          <div class="exit-breakdown-row">
-            <span class="exit-breakdown-label">You will receive</span>
-            <span class="exit-breakdown-value" id="exit-confirm-receive">-</span>
-          </div>
-          <div class="exit-breakdown-row">
-            <span class="exit-breakdown-label">Payout address</span>
-            <span class="exit-breakdown-value" id="exit-confirm-payout">-</span>
-          </div>
         </div>
 
         <div class="alert-warning">
-          <strong>Manual multi-signature process.</strong> When you confirm, your iKAS is burned immediately and irreversibly. KAS is released on Kaspa L1 by a multi-signature committee in a separate step. <strong>This is not immediate</strong> — timing varies.
+          <strong>Manual multi-signature process.</strong> Your iKAS is burned immediately and irreversibly. KAS is released on Kaspa by a multi-signature committee in a separate step — <strong>this is not immediate</strong>. Timing varies.
         </div>
 
         <label class="terms-checkbox">
           <input type="checkbox" id="exit-confirm-ack" />
-          <span>I understand this withdrawal is processed by a <strong>manual multi-signature process</strong> and is <strong>not immediate</strong>.</span>
+          <span>
+            I have read and agree to the
+            <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms of Use</a>,
+            and I understand this withdrawal is processed by a
+            <strong>manual multi-signature process</strong> and is <strong>not immediate</strong>.
+          </span>
         </label>
 
         <div class="modal-actions">
