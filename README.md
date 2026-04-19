@@ -1,12 +1,12 @@
 <p align="center">
   <strong>Igra KAS Bridge</strong><br>
-  <em>Wrap KAS from Kaspa L1 into iKAS on Igra L2 — entirely in the browser.</em>
+  <em>Bridge between Kaspa L1 (KAS) and Igra L2 (iKAS) — entirely in the browser.</em>
 </p>
 
 <p align="center">
   <a href="#features">Features</a> ·
   <a href="#quick-start">Quick Start</a> ·
-  <a href="#network-modes">Network Modes</a> ·
+  <a href="#tabs">Tabs</a> ·
   <a href="#configuration">Configuration</a> ·
   <a href="#architecture">Architecture</a> ·
   <a href="#contributing">Contributing</a>
@@ -16,11 +16,13 @@
 
 ## Features
 
-- **Multi-Network** — Galleon Testnet and Igra Mainnet
-- **Zero Backend** — Runs entirely in the browser using the Kaspa WASM SDK
-- **Wallet Support** — Kastle and KasWare browser extension wallets
-- **TX ID Mining** — Automated nonce mining to match required transaction ID prefixes
-- **Configurable Fees** — Optional per-transaction bridge fee (mainnet only)
+- **Two-way bridging** — Deposit (KAS → iKAS) on Galleon Testnet or Igra Mainnet, and Withdraw (iKAS → KAS) on Igra Mainnet
+- **Zero Backend** — Runs entirely in the browser using the Kaspa WASM SDK and viem
+- **Kaspa wallet support** — Kastle and Kasware browser extension wallets for the deposit flow
+- **EVM wallet support** — Kasware EVM, Kastle EVM, MetaMask, and any other EIP-6963 injected wallet, plus optional WalletConnect v2 for the withdraw flow
+- **TX ID Mining** — Deposits automatically mine the required Kaspa transaction ID prefix
+- **Client-side bech32 checksum validation** — Withdrawals are gated on a full Kaspa WASM SDK address check because the on-chain `KaspaAddressLib` only validates prefix + charset
+- **Configurable deposit fees** — Optional per-transaction bridge fee (mainnet only)
 
 ## Quick Start
 
@@ -69,20 +71,35 @@ npm run dev                    # → http://localhost:3000
 5. **Sign & Broadcast** — Your wallet signs the transaction and submits it to Kaspa L1
 6. **Receive iKAS** — Igra L2 detects the tagged transaction and credits iKAS to your L2 address
 
-## Network Modes
+## Tabs
 
-| Mode | L1 Network | L2 Network | TX ID Prefix | Min KAS | Mechanism |
-|------|------------|------------|:------------:|--------:|-----------|
-| **Galleon Testnet** | Kaspa Testnet-10 | Igra Galleon Testnet | `97b4` | 1 | KAS → Entry address |
-| **Igra Mainnet** | Kaspa Mainnet | Igra Mainnet | `97b1` | 10 | KAS → Entry address |
+The UI presents three tabs at the top of the page:
 
-### Galleon Testnet
+| Tab | Direction | L1 Network | L2 Network | Mechanism |
+|-----|-----------|------------|------------|-----------|
+| **Galleon Testnet · Deposit** | KAS → iKAS | Kaspa Testnet-10 | Igra Galleon Testnet | KAS → Entry address + TX ID mining (prefix `97b4`) |
+| **Igra Mainnet · Deposit** | KAS → iKAS | Kaspa Mainnet | Igra Mainnet | KAS → Entry address + TX ID mining (prefix `97b1`) |
+| **Igra Mainnet · Withdraw** | iKAS → KAS | Igra Mainnet | Kaspa Mainnet | `KasExitBridge.requestExit` (burn iKAS, manual multi-sig unlocks KAS) |
 
-Wrap TKAS from Kaspa Testnet-10 to receive iKAS on Igra Galleon Testnet. KAS is sent to a designated Entry address where it is locked. Uses a dedicated wRPC node configured via `VITE_TESTNET_NODE_URL`.
+Switching between Mainnet Deposit ↔ Mainnet Withdraw preserves both the Kaspa wallet (deposits) and the EVM wallet (withdrawals) state. Switching between Testnet and Mainnet disconnects the Kaspa wallet (L1 network changed); the EVM wallet is independent.
 
-### Igra Mainnet
+### Deposits (KAS → iKAS)
 
-Wrap KAS from Kaspa Mainnet to receive iKAS on Igra Mainnet. KAS is sent to the Entry address where it is locked. Minimum 10 KAS as DDoS protection.
+Wraps KAS into iKAS on Igra via a Kaspa Entry transaction. KAS is sent to the Entry address where it is locked. Minimum 10 KAS (Igra Mainnet) or 1 KAS (Galleon Testnet).
+
+### Withdrawals (iKAS → KAS)
+
+Calls `requestExit(kasPayoutAddress, unlockAmountSompi)` on the deployed `KasExitBridge` proxy. The call burns the user's iKAS immediately and irreversibly, then emits an `ExitRequested` event that a multi-signature committee uses to release KAS on Kaspa L1 **out-of-band**.
+
+**This withdrawal flow is not immediate.** Timing varies by the committee's cadence. The UI surfaces this prominently in a permanent warning banner, a pre-submit confirmation modal with an explicit acknowledgment checkbox, and a "pending multi-signature release" success panel after the burn tx is mined.
+
+**Decimals/scaling:**
+- iKAS is the native 18-decimal gas token on Igra (1 iKAS = 10¹⁸ wei).
+- Sompi is the 8-decimal unit on Kaspa L1 (1 KAS = 10⁸ sompi).
+- The contract's `SOMPI_SCALE = 10¹⁰`. `msg.value` must equal `(unlockAmountSompi + feeAmountSompi) * 10¹⁰` **exactly** — no slack.
+- User input is capped at 8 decimal places; sub-sompi dust is rejected before submission.
+
+**Payout address validation** is done client-side via the Kaspa WASM SDK (`new Address(...)`), which performs a full bech32 decode and checksum check. This is load-bearing — `KaspaAddressLib.verifyKaspaAddress` on chain only checks prefix + charset, not the checksum, so a typo that slipped past client-side validation would burn iKAS with no automatic recourse.
 
 ## Configuration
 
@@ -93,9 +110,13 @@ All variables are optional and have sensible defaults. See [`.env.example`](.env
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `VITE_MAINNET_MIN_KAS` | `10` | Minimum KAS per mainnet bridge tx. Must be a positive integer; invalid values fall back to `10`. Testnet minimums are hardcoded to `1`. |
-| `VITE_MAINNET_FEE_KAS` | *(none)* | Bridge fee in whole KAS. **Both** `FEE_KAS` and `FEE_ADDRESS` must be set or no fee is charged. |
-| `VITE_MAINNET_FEE_ADDRESS` | *(none)* | Kaspa address that receives the bridge fee. |
+| `VITE_MAINNET_FEE_KAS` | *(none)* | Deposit bridge fee in whole KAS. **Both** `FEE_KAS` and `FEE_ADDRESS` must be set or no fee is charged. |
+| `VITE_MAINNET_FEE_ADDRESS` | *(none)* | Kaspa address that receives the deposit bridge fee. |
 | `VITE_TESTNET_NODE_URL` | *(none)* | Direct `wss://` URL to a Kaspa Testnet-10 wRPC node. Leave empty to use the default Resolver. |
+| `VITE_IGRA_EXIT_CONTRACT_ADDRESS` | `0x4bb88C213d3eD9dc4bae694f1bc1bF745903b2d0` | Deployed `KasExitBridge` proxy on Igra Mainnet. When unset or malformed, the "Igra Mainnet · Withdraw" tab is hidden. Withdrawal policy (min, max, throttle, fee) is read live from the contract's `getConfig()` view. |
+| `VITE_WALLETCONNECT_PROJECT_ID` | *(none)* | WalletConnect Cloud project id. When set, the withdraw wallet picker includes a WalletConnect option (lazy-loaded). Injected wallets (Kasware EVM, Kastle EVM, MetaMask) work without it. |
+
+> Vite bakes `VITE_*` variables into the bundle at build time. Changing them in Railway requires a rebuild before the new value takes effect.
 
 > **Note:** There is no enforced maximum bridge amount — the bridge accepts any amount above the minimum. `VITE_MAINNET_MAX_KAS` is reserved in `.env.example` but not yet wired into the config.
 
@@ -143,18 +164,24 @@ The public Kaspa Resolver may not reliably discover Testnet-10 nodes. To use a d
 
 ```
 src/
-├── main.ts          UI, state management, network switching
-├── config.ts        Per-network constants and utilities
-├── bridge.ts        Entry payload construction, mining orchestration
-├── tx-miner.ts      RPC connection, UTXO fetching, nonce mining loop
+├── main.ts          UI, tab state, deposit + withdraw orchestration
+├── config.ts        Per-network constants, Igra EVM chain descriptor, helpers
+├── bridge.ts        Entry payload construction, deposit orchestration
+├── tx-miner.ts      RPC connection, UTXO fetching, nonce mining loop (deposit)
 ├── kaspa-wasm.ts    WASM SDK loader
-├── kastle.ts        Kastle wallet adapter
-├── kasware.ts       KasWare wallet adapter
-├── wallet.ts        Shared wallet types
+├── kastle.ts        Kastle Kaspa wallet adapter (deposit)
+├── kasware.ts       Kasware Kaspa wallet adapter (deposit)
+├── wallet.ts        Shared Kaspa wallet types
+├── evm-wallet.ts    EIP-6963 + WalletConnect discovery, chain-switch (withdraw)
+├── exit.ts          KasExitBridge ABI, preflight, simulate+send, receipt decoding
+├── exit-config.ts   Withdraw UI constants and explorer URL helpers
 └── vite-env.d.ts    Vite environment variable types
 
 public/
 └── kaspa/           Kaspa WASM SDK (kaspa.js, kaspa_bg.wasm, kaspa.d.ts)
+
+kasExitBridge/       Verified Solidity source of the deployed KasExitBridge contract
+                     (reference only — matches the on-chain implementation)
 
 docs/
 └── kas-bridge-integration.md   Entry TX format, mining protocol, integration notes
@@ -166,7 +193,9 @@ docs/
 |--------|---------------|
 | **tx-miner** | Connects to a Kaspa node (direct URL or Resolver), fetches UTXOs, builds transactions, and iterates nonces until the TX ID matches the required prefix |
 | **bridge** | Constructs the 33-byte Entry payload (`0x92` prefix + L2 address + amount + nonce) and orchestrates the mine → sign → broadcast flow |
-| **config** | Defines network parameters per mode and exposes a reactive `CONFIG` object that switches with `setNetworkMode()` |
+| **config** | Defines network parameters per mode, the Igra Mainnet viem `Chain` descriptor, and helpers like `getExitContractAddress()` and `estimateIgraBlockTimeSeconds()` |
+| **evm-wallet** | Discovers EVM wallets via EIP-6963 with legacy fallbacks, lazy-loads WalletConnect v2, ensures the wallet is on Igra Mainnet using `wallet_switchEthereumChain` → `wallet_addEthereumChain` |
+| **exit** | Binds to the deployed `KasExitBridge` ABI (`getConfig`, `throttleStatus`, `quoteFee`, `requestExit`, etc.), parses iKAS amounts decimally-safe, runs preflight, simulates+writes the contract call, decodes the receipt's `ExitRequested` + `BurnIKas` events, and maps every custom revert to friendly copy |
 
 ## Development
 
