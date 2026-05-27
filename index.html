@@ -306,6 +306,19 @@
       color: var(--warning);
     }
 
+    .alert-warning a {
+      display: inline-block;
+      margin-top: 0.35rem;
+      color: var(--success);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .alert-warning a:hover {
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
     /* Tab Selector */
     .tab-selector {
       display: flex;
@@ -639,7 +652,308 @@
     }
 
     .exit-confirm-modal {
-      max-width: 460px;
+      max-width: 520px;
+      max-height: min(92vh, 880px);
+      overflow-y: auto;
+      padding: 1.35rem 1.4rem 1.25rem;
+      scrollbar-gutter: stable;
+    }
+
+    #exit-confirm-modal.modal-overlay {
+      align-items: flex-start;
+      padding: max(1rem, env(safe-area-inset-top, 0px)) 1rem 1.25rem;
+      overflow-y: auto;
+    }
+
+    #exit-confirm-modal .exit-confirm-modal {
+      margin: auto;
+    }
+
+    .exit-modal-top {
+      margin-bottom: 1rem;
+    }
+
+    .exit-modal-eyebrow {
+      display: inline-block;
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-secondary);
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.22);
+      border-radius: 999px;
+      padding: 0.2rem 0.55rem;
+      margin-bottom: 0.55rem;
+    }
+
+    .exit-modal-top h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.35rem;
+      color: var(--text-primary);
+    }
+
+    .exit-modal-top .modal-subtitle {
+      margin-bottom: 0;
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    .exit-section-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 0.55rem;
+    }
+
+    .exit-paths {
+      margin-bottom: 1rem;
+    }
+
+    .exit-path-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.55rem;
+    }
+
+    @media (max-width: 520px) {
+      .exit-path-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .exit-path-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      padding: 0.8rem 0.85rem;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      text-decoration: none;
+      color: inherit;
+      min-height: 100%;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+
+    .exit-path-card--here {
+      border-color: rgba(245, 158, 11, 0.35);
+      background: linear-gradient(
+        165deg,
+        rgba(245, 158, 11, 0.07) 0%,
+        rgba(17, 17, 24, 0.4) 55%
+      );
+    }
+
+    .exit-path-card--kat {
+      border-color: rgba(16, 185, 129, 0.35);
+      background: linear-gradient(
+        165deg,
+        rgba(16, 185, 129, 0.09) 0%,
+        rgba(17, 17, 24, 0.35) 55%
+      );
+      cursor: pointer;
+    }
+
+    .exit-path-card--kat:hover {
+      border-color: rgba(16, 185, 129, 0.55);
+      background: linear-gradient(
+        165deg,
+        rgba(16, 185, 129, 0.14) 0%,
+        rgba(26, 26, 40, 0.9) 60%
+      );
+      box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.15);
+    }
+
+    .exit-path-card--kat:focus-visible {
+      outline: 2px solid var(--success);
+      outline-offset: 2px;
+    }
+
+    .exit-path-card-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.55rem;
+    }
+
+    .exit-path-icon {
+      flex-shrink: 0;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .exit-path-icon--manual {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--warning);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .exit-path-icon--kat {
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      padding: 0.2rem;
+    }
+
+    .exit-path-icon--kat img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+
+    .exit-path-card h5 {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.25;
+      margin: 0;
+    }
+
+    .exit-path-tag {
+      font-size: 0.68rem;
+      color: var(--text-secondary);
+      margin-top: 0.1rem;
+      line-height: 1.3;
+    }
+
+    .exit-path-card p {
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .exit-path-card p strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .exit-path-timing {
+      font-size: 0.74rem !important;
+      padding-top: 0.15rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      margin-top: 0.1rem !important;
+    }
+
+    .exit-path-timing strong {
+      color: var(--warning);
+    }
+
+    .exit-path-card--kat .exit-path-timing strong {
+      color: var(--success);
+    }
+
+    .exit-path-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      margin-top: auto;
+      padding-top: 0.35rem;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--success);
+    }
+
+    .exit-path-cta::after {
+      content: '↗';
+      font-size: 0.85em;
+    }
+
+    .exit-process-explainer {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0.75rem 0.875rem;
+      margin-bottom: 0.85rem;
+    }
+
+    .exit-process-explainer .exit-section-label {
+      margin-bottom: 0.5rem;
+    }
+
+    .exit-process-steps {
+      list-style: none;
+      display: grid;
+      gap: 0.45rem;
+      counter-reset: exit-step;
+    }
+
+    .exit-process-steps li {
+      display: grid;
+      grid-template-columns: 1.35rem 1fr;
+      gap: 0.5rem;
+      font-size: 0.76rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .exit-process-steps li::before {
+      counter-increment: exit-step;
+      content: counter(exit-step);
+      width: 1.35rem;
+      height: 1.35rem;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: var(--accent-secondary);
+      font-size: 0.68rem;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 0.05rem;
+    }
+
+    .exit-process-steps li strong {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .exit-critical-callout {
+      background: rgba(239, 68, 68, 0.06);
+      border: 1px solid rgba(239, 68, 68, 0.22);
+      border-radius: 10px;
+      padding: 0.7rem 0.85rem;
+      margin-bottom: 0.9rem;
+      font-size: 0.76rem;
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+
+    .exit-critical-callout strong {
+      color: #fca5a5;
+      font-weight: 600;
+    }
+
+    .exit-confirm-modal .terms-checkbox {
+      margin-bottom: 1rem;
+    }
+
+    .exit-confirm-modal .terms-checkbox span {
+      font-size: 0.8rem;
+    }
+
+    .exit-confirm-modal .modal-actions {
+      position: sticky;
+      bottom: 0;
+      background: linear-gradient(
+        to top,
+        var(--bg-secondary) 70%,
+        rgba(17, 17, 24, 0.97) 100%
+      );
+      padding-top: 0.35rem;
+      margin: 0 -0.15rem;
     }
 
     .exit-hero {
@@ -1074,8 +1388,9 @@
       <h2 class="card-title">Withdraw iKAS → KAS</h2>
 
       <div class="alert-warning" id="exit-notice">
-        <strong>Manual multi-signature process.</strong>
-        Your iKAS is burned immediately and irreversibly when you confirm. KAS on Kaspa L1 is released by a multi-signature committee in a separate step — <strong>this is not immediate</strong>. Timing varies.
+        <strong>Manual exit — plan for 48–72 hours.</strong>
+        KAS is released on Kaspa by <strong>Igra's Community Guardians</strong> (manual multi-sig). Your iKAS is burned immediately when you sign. Need it sooner?
+        <a href="https://katbridge.com/?from=igra&amp;to=kaspa&amp;token=iKAS" target="_blank" rel="noopener noreferrer">Use KAT Bridge for near-instant exits ↗</a>
       </div>
 
       <div id="exit-wasm-gate" class="wasm-gate" style="display: none;">
@@ -1167,7 +1482,10 @@
     <div id="exit-result-section" class="card" style="display: none;" role="status" aria-live="polite">
       <h2 class="card-title">Withdrawal Recorded</h2>
       <div class="alert-warning">
-        <strong>Your iKAS has been burned.</strong> KAS will arrive at your Kaspa address after the multi-signature committee processes the request. This is a manual step and is not immediate.
+        <strong>Your iKAS has been burned.</strong> KAS will be sent to your Kaspa address after
+        <strong>Igra's Community Guardians</strong> complete the manual multi-signature release — typically within
+        <strong>48–72 hours</strong>. This is not instant.
+        <a href="https://katbridge.com/?from=igra&amp;to=kaspa&amp;token=iKAS" target="_blank" rel="noopener noreferrer">Future exits: try KAT Bridge for near-instant service ↗</a>
       </div>
       <div class="result-grid">
         <div class="result-item">
@@ -1256,12 +1574,16 @@
     </div>
 
     <!-- Exit Confirmation Modal -->
-    <div id="exit-confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="exit-confirm-title">
+    <div id="exit-confirm-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="exit-confirm-title" aria-describedby="exit-confirm-desc">
       <div class="modal exit-confirm-modal">
-        <h3 id="exit-confirm-title">Confirm Withdrawal</h3>
-        <p class="modal-subtitle">Review the details below, then sign in your wallet.</p>
+        <header class="exit-modal-top">
+          <p class="exit-modal-eyebrow">Mainnet · iKAS → KAS</p>
+          <h3 id="exit-confirm-title">Review your withdrawal</h3>
+          <p id="exit-confirm-desc" class="modal-subtitle">
+            You are exiting iKAS on Igra for KAS on Kaspa. Confirm the transaction details, then choose whether to continue here or use a faster alternative.
+          </p>
+        </header>
 
-        <!-- Hero: what the user gets, and where -->
         <div class="exit-hero">
           <div class="exit-hero-head">
             <span class="exit-hero-label">You will receive</span>
@@ -1271,7 +1593,6 @@
           <div class="exit-hero-payout" id="exit-confirm-payout">-</div>
         </div>
 
-        <!-- Supporting breakdown -->
         <div class="exit-breakdown exit-breakdown-compact">
           <div class="exit-breakdown-row">
             <span class="exit-breakdown-label">Burn amount</span>
@@ -1287,23 +1608,80 @@
           </div>
         </div>
 
-        <div class="alert-warning">
-          <strong>Manual multi-signature process.</strong> Your iKAS is burned immediately and irreversibly. KAS is released on Kaspa by a multi-signature committee in a separate step — <strong>this is not immediate</strong>. Timing varies.
+        <section class="exit-paths" aria-label="Exit options">
+          <h4 class="exit-section-label">Choose how to exit</h4>
+          <div class="exit-path-grid">
+            <article class="exit-path-card exit-path-card--here">
+              <div class="exit-path-card-head">
+                <span class="exit-path-icon exit-path-icon--manual" aria-hidden="true">48h</span>
+                <div>
+                  <h5>Continue on this site</h5>
+                  <p class="exit-path-tag">Manual · Igra's Community Guardians</p>
+                </div>
+              </div>
+              <p>
+                After you sign, your iKAS is burned on Igra. KAS is released on Kaspa separately by
+                <strong>Igra's Community Guardians</strong> through a manual multi-signature process.
+              </p>
+              <p class="exit-path-timing">
+                <strong>Typical processing: 48–72 hours.</strong> There is no guaranteed timeline or SLA.
+              </p>
+            </article>
+
+            <a
+              class="exit-path-card exit-path-card--kat"
+              href="https://katbridge.com/?from=igra&amp;to=kaspa&amp;token=iKAS"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open KAT Bridge for near-instant iKAS to KAS exits"
+            >
+              <div class="exit-path-card-head">
+                <span class="exit-path-icon exit-path-icon--kat" aria-hidden="true">
+                  <img src="/katbridge.png" alt="" width="20" height="20" />
+                </span>
+                <div>
+                  <h5>Need it faster?</h5>
+                  <p class="exit-path-tag">Near-instant · KAT Bridge</p>
+                </div>
+              </div>
+              <p>
+                Exit iKAS → KAS through <strong>KAT Bridge</strong> with automated, near-instant settlement instead of waiting for the manual guardian process.
+              </p>
+              <p class="exit-path-timing">
+                <strong>Opens in a new tab</strong> — you will leave this interface.
+              </p>
+              <span class="exit-path-cta">Open KAT Bridge</span>
+            </a>
+          </div>
+        </section>
+
+        <section class="exit-process-explainer" aria-label="Manual exit process on this site">
+          <h4 class="exit-section-label">If you continue here</h4>
+          <ol class="exit-process-steps">
+            <li>You sign the exit contract — your <strong>iKAS is burned immediately</strong> and cannot be reversed.</li>
+            <li>Your request is recorded on Igra and queued for the guardian release process.</li>
+            <li><strong>Igra's Community Guardians</strong> manually co-sign and broadcast KAS to your Kaspa payout address (typically within <strong>48–72 hours</strong>).</li>
+          </ol>
+        </section>
+
+        <div class="exit-critical-callout" role="note">
+          <strong>Irreversible burn.</strong> Signing here destroys your iKAS on-chain right away, before any KAS is sent. Only continue if you accept the manual timeline above, or use KAT Bridge instead for a faster exit.
         </div>
 
         <label class="terms-checkbox">
           <input type="checkbox" id="exit-confirm-ack" />
           <span>
             I have read and agree to the
-            <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms of Use</a>,
-            and I understand this withdrawal is processed by a
-            <strong>manual multi-signature process</strong> and is <strong>not immediate</strong>.
+            <a href="/terms.html" target="_blank" rel="noopener noreferrer">Terms of Use</a>.
+            I understand that continuing here uses a <strong>manual multi-signature process</strong> by
+            <strong>Igra's Community Guardians</strong>, that my iKAS will be <strong>burned immediately</strong>,
+            and that KAS delivery typically takes <strong>48–72 hours</strong> with no guaranteed SLA.
           </span>
         </label>
 
         <div class="modal-actions">
           <button id="exit-confirm-cancel" type="button" class="btn-secondary">Cancel</button>
-          <button id="exit-confirm-proceed" type="button" class="btn-primary" disabled>Sign &amp; Burn</button>
+          <button id="exit-confirm-proceed" type="button" class="btn-primary" disabled>Agree &amp; sign transaction</button>
         </div>
       </div>
     </div>
