@@ -9,7 +9,7 @@
  * Reference: https://igra-labs.gitbook.io/igralabs-docs/for-developers/architecture/specifications/igra-transaction-protocol#id-4.3-entry
  */
 
-import { CONFIG, kasToSompi, isValidL2Address, getEntryAddress } from './config';
+import { CONFIG, kasToSompi, isValidL2Address, getEntryAddress, isLaneNetwork } from './config';
 import { sendKaspaWithPayload as kastleSendKaspa, signAndBroadcastTransaction as kastleSignAndBroadcast } from './kastle';
 import { sendKaspaWithPayload as kaswareSendKaspa, signAndBroadcastTransaction as kaswareSignAndBroadcast } from './kasware';
 import { isWasmInitialized } from './kaspa-wasm';
@@ -353,11 +353,15 @@ export async function executeBridgeWithMining(
   onProgress?.(`Transaction built, requesting signature from ${walletName}...`);
 
   let txId: string;
-  if (walletType === 'kastle') {
-    txId = await kastleSignAndBroadcast(txJson);
-  } else {
-    const inputCount = miningResult.tx.inputs?.length ?? 1;
-    txId = await kaswareSignAndBroadcast(txJson, inputCount);
+  try {
+    if (walletType === 'kastle') {
+      txId = await kastleSignAndBroadcast(txJson);
+    } else {
+      const inputCount = miningResult.tx.inputs?.length ?? 1;
+      txId = await kaswareSignAndBroadcast(txJson, inputCount);
+    }
+  } catch (error) {
+    throw mapLaneSigningError(error, walletName);
   }
 
   onProgress?.(`Transaction submitted: ${txId}`);
@@ -380,6 +384,40 @@ export async function executeBridgeWithMining(
     nonce: miningResult.nonce,
     iterations: miningResult.iterations,
   };
+}
+
+/**
+ * Re-maps a wallet sign/broadcast failure into a clear, actionable error when
+ * it is caused by the wallet not yet supporting Igra Galleon's Toccata (v1
+ * lane) transaction format.
+ *
+ * Two node/SDK signatures indicate this incompatibility on the lane network:
+ *   - "script units exceeded the amount committed in the input" — the wallet
+ *     dropped the per-input `computeBudget` (broadcast it as 0), so a single
+ *     signature (100,000 script units) exceeds the free allowance (9,999).
+ *   - "inconsistent with transaction version" — the wallet kept a v0
+ *     `sig_op_count` on a v1 transaction.
+ *
+ * Any other error, or any error off the lane network, is passed through
+ * untouched. Once the wallet preserves `computeBudget`, broadcast succeeds and
+ * this path is never reached — no follow-up change needed.
+ */
+function mapLaneSigningError(error: unknown, walletName: string): Error {
+  const original = error instanceof Error ? error : new Error(String(error));
+
+  if (!isLaneNetwork()) return original;
+
+  const message = original.message.toLowerCase();
+  const isToccataIncompatibility =
+    message.includes('script units exceeded') ||
+    message.includes('inconsistent with transaction version');
+
+  if (!isToccataIncompatibility) return original;
+
+  return new Error(
+    `${walletName} does not yet support Igra Galleon's updated (Toccata) transaction format. ` +
+      `Please use Kasware to bridge on Galleon Testnet until ${walletName} is updated.`
+  );
 }
 
 /**

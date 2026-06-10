@@ -11,7 +11,7 @@
  * API verified against kaspa.d.ts type definitions.
  */
 
-import { CONFIG, getMainnetFee } from './config';
+import { CONFIG, getMainnetFee, getEntrySubnetworkId, isLaneNetwork } from './config';
 import { getKaspaWasm, isWasmInitialized } from './kaspa-wasm';
 import { constructEntryPayload, payloadToHex } from './bridge';
 
@@ -115,12 +115,20 @@ export function buildEntryTransaction(
   const bridgeFee = getMainnetFee();
   const bridgeFeeSompi = bridgeFee ? bridgeFee.amountSompi : 0n;
 
-  // Network fee estimation: Kaspa charges ~1 sompi per gram of transaction mass.
-  // Entry transactions have a 33-byte payload which adds mass.
-  // Base mass ~700 + ~140 per input + ~120 per output + payload mass.
-  // Use a generous minimum that covers typical entry transactions.
-  const baseFee = 3000n;
-  const perInputFee = 1000n;
+  // Lane (Igra) entry transactions run on a non-native subnetwork and must use
+  // Toccata transaction version 1 (compute-budget inputs). Native entry
+  // transactions stay on version 0 (sig-op-count inputs).
+  const onLane = isLaneNetwork();
+
+  // Network fee estimation (sompi). Kaspa charges per gram of transaction mass.
+  // - Native (v0): ~1 sompi/gram. A generous flat minimum covers typical
+  //   entry transactions (base mass ~700 + ~140/input + payload mass).
+  // - Lane (v1, post-Toccata): the minimum standard fee rate rose to
+  //   100 sompi * max(compute grams, 2 * tx bytes). With one compute-budget
+  //   unit per input this is dominated by the compute term; the values below
+  //   keep a comfortable margin above that floor.
+  const baseFee = onLane ? 300_000n : 3000n;
+  const perInputFee = onLane ? 100_000n : 1000n;
 
   let totalAvailable = 0n;
   const selectedUtxos: any[] = [];
@@ -149,7 +157,13 @@ export function buildEntryTransaction(
     },
     signatureScript: '',
     sequence: 0n,
-    sigOpCount: 1,
+    // The two mass fields are mutually exclusive per transaction version and
+    // the node rejects an input that sets the wrong one:
+    //   - v0 (native): sig_op_count = 1, compute_budget must be 0.
+    //   - v1 (lane):   compute_budget = 10 (single-sig: mass-per-sig-op 1000 /
+    //                  grams-per-compute-budget-unit), sig_op_count MUST be 0.
+    sigOpCount: onLane ? 0 : 1,
+    ...(onLane ? { computeBudget: 10 } : {}),
     utxo: utxo,
   }));
 
@@ -190,11 +204,11 @@ export function buildEntryTransaction(
   }
 
   const txData = {
-    version: 0,
+    version: onLane ? 1 : 0,
     inputs,
     outputs,
     lockTime: 0n,
-    subnetworkId: '0000000000000000000000000000000000000000',
+    subnetworkId: getEntrySubnetworkId(),
     gas: 0n,
     payload: payloadHex,
   };

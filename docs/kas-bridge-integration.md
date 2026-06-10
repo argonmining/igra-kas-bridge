@@ -23,11 +23,21 @@ The wrapping process constructs **Entry transactions** on Kaspa L1 that are dete
 | L1 Network | Kaspa Testnet-10 |
 | Entry Address | `kaspatest:qqmstl2znv9tsfgcmj9shme82my867tapz7pdu4ztwdn6sm9452jj5mm0sxzw` |
 | TX ID Prefix | `97b4` |
+| Lane ID (subnetwork namespace) | `97b10000` |
+| TX Version | 1 (Toccata) |
+| Input compute budget | 10 per input |
 | L2 Chain ID | 38836 |
 | L2 RPC | `https://galleon-testnet.igralabs.com:8545` |
 | Minimum Amount | 1 KAS |
 
 In testnet mode, KAS is sent to a designated Entry address where it is locked.
+
+Since the Kaspa Testnet-10 Toccata hardfork, Galleon entry transactions must be
+posted on Igra's KIP-21 lane. The 4-byte lane namespace `97b10000` is zero-padded
+to the full 20-byte on-chain `subnetworkId`
+(`97b1000000000000000000000000000000000000`), and the transaction must use
+version 1 with each input carrying a `computeBudget` of 10 (replacing the v0
+`sigOpCount`). Gas stays 0.
 
 ### Galleon Test Mainnet
 
