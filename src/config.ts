@@ -21,6 +21,13 @@ export interface NetworkConfig {
     /** The P2SH address where KAS is locked for bridging. Null means self-send (sender's own address). */
     readonly ENTRY_ADDRESS: string | null;
     readonly TX_ID_PREFIX: string;
+    /**
+     * KIP-21 user-lane namespace as 4 bytes of lowercase hex (8 chars, e.g.
+     * '97b10000'). When set, entry transactions are built on this non-native
+     * subnetwork and must use Toccata transaction version 1. Null means the
+     * native subnetwork (pre-Toccata version 0 transactions).
+     */
+    readonly LANE_ID: string | null;
     readonly MIN_BRIDGE_AMOUNT_KAS: number;
     readonly MAX_BRIDGE_AMOUNT_KAS: number | null;
     readonly SOMPI_PER_KAS: bigint;
@@ -42,6 +49,7 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       NETWORK_ID: 'testnet-10',
       ENTRY_ADDRESS: 'kaspatest:qqmstl2znv9tsfgcmj9shme82my867tapz7pdu4ztwdn6sm9452jj5mm0sxzw',
       TX_ID_PREFIX: '97b4',
+      LANE_ID: '97b10000',
       MIN_BRIDGE_AMOUNT_KAS: 1,
       MAX_BRIDGE_AMOUNT_KAS: null,
       SOMPI_PER_KAS: 100_000_000n,
@@ -61,6 +69,7 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       NETWORK_ID: 'mainnet',
       ENTRY_ADDRESS: null, // Self-send: KAS goes back to sender's own address
       TX_ID_PREFIX: '97b5',
+      LANE_ID: null,
       MIN_BRIDGE_AMOUNT_KAS: 1,
       MAX_BRIDGE_AMOUNT_KAS: null,
       SOMPI_PER_KAS: 100_000_000n,
@@ -80,6 +89,7 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       NETWORK_ID: 'mainnet',
       ENTRY_ADDRESS: 'kaspa:ppvnxxzm0rr37zpnwux2f2ntvfpr4uqdpm7zsvsztg3en92r7gs0wkmr72q9n',
       TX_ID_PREFIX: '97b1',
+      LANE_ID: null,
       MIN_BRIDGE_AMOUNT_KAS: parseInt(import.meta.env.VITE_MAINNET_MIN_KAS, 10) || 10,
       MAX_BRIDGE_AMOUNT_KAS: null,
       SOMPI_PER_KAS: 100_000_000n,
@@ -193,6 +203,31 @@ export function getEntryAddress(senderAddress?: string): string {
   if (entry !== null) return entry;
   if (!senderAddress) throw new Error('Sender address required for self-send mode');
   return senderAddress;
+}
+
+/** The 20-byte native subnetwork id (all zeros) as 40 lowercase hex chars. */
+export const SUBNETWORK_ID_NATIVE = '0'.repeat(40);
+
+/**
+ * Resolves the full 20-byte on-chain subnetwork id (40 lowercase hex chars)
+ * for the current network's entry transactions.
+ *
+ * When a KIP-21 lane is configured, the 4-byte namespace is zero-padded to
+ * the full 20-byte id per the KIP-21 `[namespace, 0×16]` shape. Otherwise the
+ * native (all-zeros) subnetwork is used.
+ */
+export function getEntrySubnetworkId(): string {
+  const lane = CONFIG.L1.LANE_ID;
+  if (lane === null) return SUBNETWORK_ID_NATIVE;
+  return lane + '0'.repeat(SUBNETWORK_ID_NATIVE.length - lane.length);
+}
+
+/**
+ * Whether the current network's entry transactions run on a non-native lane,
+ * which requires Toccata transaction version 1 (compute-budget inputs).
+ */
+export function isLaneNetwork(): boolean {
+  return CONFIG.L1.LANE_ID !== null;
 }
 
 /**
