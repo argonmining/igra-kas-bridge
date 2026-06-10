@@ -157,11 +157,12 @@ export function buildEntryTransaction(
     },
     signatureScript: '',
     sequence: 0n,
-    // v0 inputs commit sig_op_count; v1 (lane) inputs commit compute_budget.
-    // A single-signature input needs compute_budget = 10 (mass-per-sig-op
-    // 1000 / grams-per-compute-budget-unit). Both fields are accepted by the
-    // SDK; the transaction version selects which one is authoritative.
-    sigOpCount: 1,
+    // The two mass fields are mutually exclusive per transaction version and
+    // the node rejects an input that sets the wrong one:
+    //   - v0 (native): sig_op_count = 1, compute_budget must be 0.
+    //   - v1 (lane):   compute_budget = 10 (single-sig: mass-per-sig-op 1000 /
+    //                  grams-per-compute-budget-unit), sig_op_count MUST be 0.
+    sigOpCount: onLane ? 0 : 1,
     ...(onLane ? { computeBudget: 10 } : {}),
     utxo: utxo,
   }));
