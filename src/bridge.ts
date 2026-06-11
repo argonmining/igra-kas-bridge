@@ -387,6 +387,33 @@ export async function executeBridgeWithMining(
 }
 
 /**
+ * Best-effort extraction of a human-readable message from an unknown thrown
+ * value. Browser wallet providers (Kasware/Kastle) frequently reject with a
+ * plain object (e.g. `{ code, message }`) rather than an `Error`; naively
+ * stringifying those yields the useless "[object Object]". This walks the
+ * common error shapes and falls back to JSON so the user always sees a real
+ * message.
+ */
+function errorToMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  if (error && typeof error === 'object') {
+    const obj = error as Record<string, any>;
+    const candidate = obj.message ?? obj.error?.message ?? obj.data?.message ?? obj.reason;
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+      return candidate;
+    }
+    try {
+      const json = JSON.stringify(error);
+      if (json && json !== '{}') return json;
+    } catch {
+      // Non-serializable (e.g. circular reference) — fall through.
+    }
+  }
+  return 'Unknown wallet error';
+}
+
+/**
  * Re-maps a wallet sign/broadcast failure into a clear, actionable error when
  * it is caused by the wallet not yet supporting Igra Galleon's Toccata (v1
  * lane) transaction format.
@@ -403,14 +430,15 @@ export async function executeBridgeWithMining(
  * this path is never reached — no follow-up change needed.
  */
 function mapLaneSigningError(error: unknown, walletName: string): Error {
-  const original = error instanceof Error ? error : new Error(String(error));
+  const message = errorToMessage(error);
+  const original = error instanceof Error ? error : new Error(message);
 
   if (!isLaneNetwork()) return original;
 
-  const message = original.message.toLowerCase();
+  const lower = message.toLowerCase();
   const isToccataIncompatibility =
-    message.includes('script units exceeded') ||
-    message.includes('inconsistent with transaction version');
+    lower.includes('script units exceeded') ||
+    lower.includes('inconsistent with transaction version');
 
   if (!isToccataIncompatibility) return original;
 
