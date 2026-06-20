@@ -331,59 +331,120 @@ export async function executeBridgeWithMining(
   await initRpcConnection();
   onProgress?.(`Connected to Kaspa network`);
 
-  // Mine TX ID
-  onProgress?.(`Mining TX ID (this may take a moment)...`);
-
-  const miningResult = await mineTxId(
-    senderAddress,
-    l2Address,
-    amountSompi,
-    entryAddress,
-    (iteration, currentTxId) => {
-      onProgress?.(`Mining: iteration ${iteration}, current prefix: ${currentTxId.slice(0, 4)}`);
-    }
-  );
-
-  onProgress?.(`Found matching TX ID after ${miningResult.iterations} iterations`);
-  onProgress?.(`TX ID: ${miningResult.txId}`);
-  onProgress?.(`Nonce: 0x${miningResult.nonce.toString(16).padStart(8, '0')}`);
-
   const walletName = walletType === 'kastle' ? 'Kastle' : 'Kasware';
-  const txJson = serializeTransaction(miningResult.tx);
-  onProgress?.(`Transaction built, requesting signature from ${walletName}...`);
 
-  let txId: string;
-  try {
-    if (walletType === 'kastle') {
-      txId = await kastleSignAndBroadcast(txJson);
-    } else {
-      const inputCount = miningResult.tx.inputs?.length ?? 1;
-      txId = await kaswareSignAndBroadcast(txJson, inputCount);
+  // Mine + sign + broadcast, retrying once on a transient orphan rejection.
+  //
+  // We read (confirmed-only) UTXOs from our RPC node, but the signed tx is
+  // broadcast through the wallet's own node. If that node lags and has not yet
+  // accepted the block carrying a selected UTXO, it rejects the child as an
+  // orphan ("orphan where orphan is disallowed"). That skew clears within a few
+  // seconds (TN10 ~1s blocks), so a short wait + fresh mine resolves it.
+  let result: BridgeResult | undefined;
+
+  for (let attempt = 1; attempt <= MAX_BROADCAST_ATTEMPTS; attempt++) {
+    onProgress?.(`Mining TX ID (this may take a moment)...`);
+
+    const miningResult = await mineTxId(
+      senderAddress,
+      l2Address,
+      amountSompi,
+      entryAddress,
+      (iteration, currentTxId) => {
+        onProgress?.(`Mining: iteration ${iteration}, current prefix: ${currentTxId.slice(0, 4)}`);
+      }
+    );
+
+    onProgress?.(`Found matching TX ID after ${miningResult.iterations} iterations`);
+    onProgress?.(`TX ID: ${miningResult.txId}`);
+    onProgress?.(`Nonce: 0x${miningResult.nonce.toString(16).padStart(8, '0')}`);
+
+    const txJson = serializeTransaction(miningResult.tx);
+    onProgress?.(`Transaction built, requesting signature from ${walletName}...`);
+
+    let txId: string;
+    try {
+      if (walletType === 'kastle') {
+        txId = await kastleSignAndBroadcast(txJson);
+      } else {
+        const inputCount = miningResult.tx.inputs?.length ?? 1;
+        txId = await kaswareSignAndBroadcast(txJson, inputCount);
+      }
+    } catch (error) {
+      // Orphan rejections are transient broadcast-node propagation lag — wait
+      // briefly and retry with a fresh mine before surfacing an error.
+      if (isOrphanError(error) && attempt < MAX_BROADCAST_ATTEMPTS) {
+        onProgress?.(`Broadcasting node has not yet seen the selected funds (propagation lag).`);
+        onProgress?.(`Waiting ${ORPHAN_RETRY_DELAY_MS / 1000}s and retrying with a fresh transaction...`);
+        await delay(ORPHAN_RETRY_DELAY_MS);
+        continue;
+      }
+      if (isOrphanError(error)) {
+        throw new Error(
+          `The transaction was rejected because the broadcasting node had not yet ` +
+            `received the funds being spent (network propagation lag). This usually ` +
+            `clears within a few seconds — please try bridging again.`
+        );
+      }
+      throw mapLaneSigningError(error, walletName);
     }
-  } catch (error) {
-    throw mapLaneSigningError(error, walletName);
+
+    onProgress?.(`Transaction submitted: ${txId}`);
+
+    // Verify the TX ID matches (should match since we mined it)
+    const expectedPrefix = CONFIG.L1.TX_ID_PREFIX.toLowerCase();
+    const actualPrefix = txId.slice(0, expectedPrefix.length).toLowerCase();
+
+    if (actualPrefix !== expectedPrefix) {
+      onProgress?.(`Warning: Broadcast TX ID differs from mined TX ID`);
+      onProgress?.(`This can happen if UTXOs changed during signing.`);
+    } else {
+      onProgress?.(`TX ID prefix verified: ${actualPrefix}`);
+    }
+
+    result = {
+      txId,
+      amountSompi,
+      l2Address,
+      nonce: miningResult.nonce,
+      iterations: miningResult.iterations,
+    };
+    break;
   }
 
-  onProgress?.(`Transaction submitted: ${txId}`);
-
-  // Verify the TX ID matches (should match since we mined it)
-  const expectedPrefix = CONFIG.L1.TX_ID_PREFIX.toLowerCase();
-  const actualPrefix = txId.slice(0, expectedPrefix.length).toLowerCase();
-
-  if (actualPrefix !== expectedPrefix) {
-    onProgress?.(`Warning: Broadcast TX ID differs from mined TX ID`);
-    onProgress?.(`This can happen if UTXOs changed during signing.`);
-  } else {
-    onProgress?.(`TX ID prefix verified: ${actualPrefix}`);
+  // Unreachable in practice: the loop either returns a result or throws above.
+  if (!result) {
+    throw new Error('Bridge transaction failed: exhausted broadcast attempts.');
   }
 
-  return {
-    txId,
-    amountSompi,
-    l2Address,
-    nonce: miningResult.nonce,
-    iterations: miningResult.iterations,
-  };
+  return result;
+}
+
+/**
+ * Maximum mine→sign→broadcast attempts. A second attempt is only used to
+ * recover from a transient orphan rejection (broadcast-node propagation lag).
+ */
+const MAX_BROADCAST_ATTEMPTS = 2;
+
+/**
+ * Delay before the orphan retry. TN10 produces blocks roughly every second, so
+ * a few seconds reliably lets a lagging broadcast node catch up to the block
+ * carrying the selected UTXO.
+ */
+const ORPHAN_RETRY_DELAY_MS = 4000;
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * True when a broadcast failure is a Kaspa orphan rejection — i.e. the node
+ * could not find the parent UTXO of an input ("...is an orphan where orphan is
+ * disallowed"). This is propagation lag between the node we read UTXOs from and
+ * the node the wallet broadcasts through, not a problem with the transaction.
+ */
+function isOrphanError(error: unknown): boolean {
+  return errorToMessage(error).toLowerCase().includes('orphan');
 }
 
 /**

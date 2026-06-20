@@ -93,6 +93,40 @@ export async function getUtxos(address: string): Promise<any[]> {
 }
 
 /**
+ * Minimum standard fee rate enforced by Kaspa mempool policy since the Toccata
+ * hardfork: 100 sompi per gram of transaction mass. The node rejects any
+ * transaction whose fee is below `100 * mass(tx)` as non-standard, regardless
+ * of current network demand, so we never bid below this floor.
+ */
+const TOCCATA_MIN_FEERATE = 100n;
+
+/**
+ * Resolve the fee rate (sompi/gram) to use for the native (v0) entry path.
+ *
+ * Queries the connected node's `getFeeEstimate` and takes the top-priority
+ * bucket for reliable sub-second inclusion, then clamps to the Toccata minimum
+ * standard fee rate. Falls back to the minimum if the estimate is unavailable.
+ */
+async function getNativeFeeRatePerGram(): Promise<bigint> {
+  if (!rpcClient || !isConnected) {
+    throw new Error('RPC not connected');
+  }
+
+  try {
+    const response = await rpcClient.getFeeEstimate();
+    const feerate = response?.estimate?.priorityBucket?.feerate;
+    if (typeof feerate === 'number' && Number.isFinite(feerate) && feerate > 0) {
+      const ceiled = BigInt(Math.ceil(feerate));
+      return ceiled > TOCCATA_MIN_FEERATE ? ceiled : TOCCATA_MIN_FEERATE;
+    }
+  } catch (error) {
+    console.warn('getFeeEstimate failed; using Toccata minimum fee rate', error);
+  }
+
+  return TOCCATA_MIN_FEERATE;
+}
+
+/**
  * Build an unsigned transaction with Entry payload
  */
 export function buildEntryTransaction(
@@ -102,7 +136,8 @@ export function buildEntryTransaction(
   entryAddress: string,
   amountSompi: bigint,
   l2Address: string,
-  nonce: number
+  nonce: number,
+  networkFeeOverride?: bigint
 ): any {
   // Construct the Entry payload
   const payload = constructEntryPayload(l2Address, amountSompi, nonce);
@@ -120,15 +155,19 @@ export function buildEntryTransaction(
   // transactions stay on version 0 (sig-op-count inputs).
   const onLane = isLaneNetwork();
 
-  // Network fee estimation (sompi). Kaspa charges per gram of transaction mass.
-  // - Native (v0): ~1 sompi/gram. A generous flat minimum covers typical
-  //   entry transactions (base mass ~700 + ~140/input + payload mass).
-  // - Lane (v1, post-Toccata): the minimum standard fee rate rose to
-  //   100 sompi * max(compute grams, 2 * tx bytes). With one compute-budget
-  //   unit per input this is dominated by the compute term; the values below
-  //   keep a comfortable margin above that floor.
+  // Network fee (sompi). Kaspa charges per gram of transaction mass.
+  // - Native (v0): post-Toccata the minimum standard fee rate is 100 sompi/gram,
+  //   so the caller passes `networkFeeOverride` computed as feerate * mass(tx)
+  //   (see mineTxId). The flat fallback below is only used for the one-off probe
+  //   build that measures mass before the override is known; it is intentionally
+  //   tiny because UTXO selection is driven by `amountSompi`, not by the fee.
+  // - Lane (v1, post-Toccata): the floor is 100 sompi * max(compute grams,
+  //   2 * tx bytes); with one compute-budget unit per input this is dominated by
+  //   the compute term, and the flat values below keep a margin above it.
   const baseFee = onLane ? 300_000n : 3000n;
   const perInputFee = onLane ? 100_000n : 1000n;
+  const feeForInputs = (inputCount: number): bigint =>
+    networkFeeOverride ?? baseFee + perInputFee * BigInt(inputCount);
 
   let totalAvailable = 0n;
   const selectedUtxos: any[] = [];
@@ -137,13 +176,13 @@ export function buildEntryTransaction(
     totalAvailable += utxo.amount;
     selectedUtxos.push(utxo);
 
-    const estimatedNetworkFee = baseFee + perInputFee * BigInt(selectedUtxos.length);
+    const estimatedNetworkFee = feeForInputs(selectedUtxos.length);
     if (totalAvailable >= amountSompi + bridgeFeeSompi + estimatedNetworkFee) {
       break;
     }
   }
 
-  const estimatedNetworkFee = baseFee + perInputFee * BigInt(selectedUtxos.length);
+  const estimatedNetworkFee = feeForInputs(selectedUtxos.length);
 
   if (totalAvailable < amountSompi + bridgeFeeSompi + estimatedNetworkFee) {
     const totalNeeded = amountSompi + bridgeFeeSompi + estimatedNetworkFee;
@@ -269,6 +308,31 @@ export async function mineTxId(
   // Start with random nonce to avoid collisions
   let nonce = Math.floor(Math.random() * 0xFFFFFFFF);
 
+  // For the native (v0) path, derive the network fee from the actual transaction
+  // mass and the node's current fee rate (clamped to the Toccata 100 sompi/gram
+  // floor). The nonce only changes the 4-byte payload nonce, so mass — and thus
+  // the fee — is identical across every mined candidate; compute it once here
+  // from a probe build and reuse it for the whole mining loop. The lane (v1)
+  // path keeps its own flat fee schedule (networkFeeOverride stays undefined).
+  let networkFeeOverride: bigint | undefined;
+  if (!isLaneNetwork()) {
+    const feeRatePerGram = await getNativeFeeRatePerGram();
+    const probeTx = buildEntryTransaction(
+      kaspa,
+      utxos,
+      senderAddress,
+      entryAddress,
+      amountSompi,
+      l2Address,
+      nonce
+    );
+    const mass: bigint = kaspa.calculateTransactionMass(CONFIG.L1.NETWORK_ID, probeTx, 1);
+    const rawFee = feeRatePerGram * mass;
+    // 20% safety margin absorbs the unsigned→signed mass delta and the
+    // `2 * bytes` term of the standardness rule when it exceeds compute mass.
+    networkFeeOverride = rawFee + rawFee / 5n;
+  }
+
   for (let i = 0; i < maxIterations; i++) {
     // Build transaction with current nonce
     const tx = buildEntryTransaction(
@@ -278,7 +342,8 @@ export async function mineTxId(
       entryAddress,
       amountSompi,
       l2Address,
-      nonce
+      nonce,
+      networkFeeOverride
     );
 
     const txId = getTransactionId(tx);

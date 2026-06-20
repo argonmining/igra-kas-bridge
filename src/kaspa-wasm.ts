@@ -14,7 +14,7 @@
  * can never be paired across versions by a browser/CDN cache (which would
  * cause a WASM `LinkError`). Bump this whenever the SDK is revendored.
  */
-const KASPA_SDK_VERSION = '2.0.0';
+const KASPA_SDK_VERSION = '2.0.1';
 
 let wasmInitialized = false;
 let wasmModule: any = null;
