@@ -504,8 +504,8 @@ function mapLaneSigningError(error: unknown, walletName: string): Error {
   if (!isToccataIncompatibility) return original;
 
   return new Error(
-    `${walletName} does not yet support Igra Galleon's updated (Toccata) transaction format. ` +
-      `Please use Kasware to bridge on Galleon Testnet until ${walletName} is updated.`
+    `${walletName} does not yet support Igra's updated (Toccata / KIP-21 lane) transaction format. ` +
+      `Please use Kasware to bridge until ${walletName} is updated.`
   );
 }
 

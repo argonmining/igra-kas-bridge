@@ -89,7 +89,13 @@ const NETWORKS: Record<NetworkMode, NetworkConfig> = {
       NETWORK_ID: 'mainnet',
       ENTRY_ADDRESS: 'kaspa:ppvnxxzm0rr37zpnwux2f2ntvfpr4uqdpm7zsvsztg3en92r7gs0wkmr72q9n',
       TX_ID_PREFIX: '97b1',
-      LANE_ID: null,
+      // Kaspa mainnet activated the Toccata (KIP-21) hardfork at DAA score
+      // 474,165,565 (~2026-06-30 16:15 UTC). Igra now consumes entry
+      // transactions on its dedicated KIP-21 lane, so mainnet entries must be
+      // Toccata version 1 on this namespace — native (v0) entries are locked
+      // on L1 but no longer credited on L2. The lane namespace is shared
+      // across all Igra networks (per IgraLabs Orchestra IGRA_LANE_ID).
+      LANE_ID: '97b10000',
       MIN_BRIDGE_AMOUNT_KAS: parseInt(import.meta.env.VITE_MAINNET_MIN_KAS, 10) || 10,
       MAX_BRIDGE_AMOUNT_KAS: null,
       SOMPI_PER_KAS: 100_000_000n,

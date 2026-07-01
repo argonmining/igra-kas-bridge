@@ -59,11 +59,25 @@ In test mainnet mode, KAS is sent back to the user's own address with an Entry p
 | L1 Network | Kaspa Mainnet |
 | Entry Address | `kaspa:ppvnxxzm0rr37zpnwux2f2ntvfpr4uqdpm7zsvsztg3en92r7gs0wkmr72q9n` |
 | TX ID Prefix | `97b1` |
+| Lane ID (subnetwork namespace) | `97b10000` |
+| TX Version | 1 (Toccata) |
+| Input compute budget | 10 per input |
 | L2 Chain ID | 38833 |
 | L2 RPC | `https://rpc.igralabs.com:8545` |
 | Minimum Amount | 10 KAS |
 
 In mainnet mode, KAS is sent to the Entry address where it is locked — the same mechanism as Galleon Testnet, but on Kaspa Mainnet. The 10 KAS minimum serves as DDoS protection.
+
+Since the Kaspa Mainnet Toccata hardfork (KIP-21) activated at DAA score
+`474,165,565` (~2026-06-30 16:15 UTC), mainnet entry transactions must be posted
+on Igra's dedicated KIP-21 lane. The 4-byte lane namespace `97b10000` is
+zero-padded to the full 20-byte on-chain `subnetworkId`
+(`97b1000000000000000000000000000000000000`), and the transaction must use
+version 1 with each input carrying a `computeBudget` of 10 (replacing the v0
+`sigOpCount`). Gas stays 0. This is the same lane namespace Galleon Testnet uses
+— per IgraLabs Orchestra, `IGRA_LANE_ID` is shared across all networks. Native
+(v0) entries submitted after activation are locked on L1 but never credited on
+L2.
 
 ---
 

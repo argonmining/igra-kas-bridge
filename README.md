@@ -156,6 +156,7 @@ The public Kaspa Resolver may not reliably discover Testnet-10 nodes. To use a d
 | L2 Chain ID | `38833` |
 | Entry Address | `kaspa:ppvnxxzm0rr37zpnwux2f2ntvfpr4uqdpm7zsvsztg3en92r7gs0wkmr72q9n` |
 | TX ID Prefix | `97b1` |
+| Lane ID (subnetwork namespace) | `97b10000` (Toccata v1, `computeBudget` 10/input) |
 | Explorer | [explorer.kaspa.org](https://explorer.kaspa.org) |
 
 </details>
