@@ -890,9 +890,8 @@
     }
 
     .exit-process-steps li {
-      display: grid;
-      grid-template-columns: 1.35rem 1fr;
-      gap: 0.5rem;
+      position: relative;
+      padding-left: calc(1.35rem + 0.5rem);
       font-size: 0.76rem;
       color: var(--text-secondary);
       line-height: 1.45;
@@ -901,6 +900,9 @@
     .exit-process-steps li::before {
       counter-increment: exit-step;
       content: counter(exit-step);
+      position: absolute;
+      left: 0;
+      top: 0.05rem;
       width: 1.35rem;
       height: 1.35rem;
       border-radius: 50%;
@@ -912,7 +914,6 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-top: 0.05rem;
     }
 
     .exit-process-steps li strong {
